@@ -1,0 +1,7 @@
+* text=auto
+# Windows tools expect CRLF in these
+*.bat text eol=crlf
+*.asm text eol=crlf
+*.inc text eol=crlf
+*.pdf binary
+*.docx binary

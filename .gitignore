@@ -1,0 +1,29 @@
+# ---------- Build output ----------
+build/
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.lst
+*.map
+*.exp
+*.idb
+
+# ---------- Visual Studio / IDEs ----------
+.vs/
+*.vcxproj.user
+*.suo
+*.user
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# ---------- Runtime data ----------
+data/highscores.dat
+
+# ---------- OS / misc ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+*.tmp
