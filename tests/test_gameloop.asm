@@ -143,6 +143,50 @@ TestRoundOutOfEnergy PROC USES eax
 TestRoundOutOfEnergy ENDP
 
 ;---------------------------------------------------------------------
+; TestHandleCommand
+; Each key reaches the right action, in either case; other keys are
+; ignored without changing anything.
+;---------------------------------------------------------------------
+TestHandleCommand PROC USES eax
+    call ResetLoopTestState
+    INVOKE HandleCommand, 'w'
+    mAssertEq eax, 1, "w is a command"
+    mAssertEq elevatorFloor, 1, "w moves up (lower case)"
+    INVOKE HandleCommand, 'W'
+    mAssertEq elevatorFloor, 2, "W moves up (upper case)"
+    INVOKE HandleCommand, 's'
+    mAssertEq elevatorFloor, 1, "s moves down"
+    mAssertEq energy, 100 - 3 * MOVE_COST, "three moves cost 3 x MOVE_COST"
+
+    call ResetLoopTestState
+    INVOKE HandleCommand, 'X'
+    mAssertEq energy, 100 - SCAN_COST, "X runs a scan"
+
+    call ResetLoopTestState
+    mov  elevatorFloor, WAITING_FLOOR
+    INVOKE HandleCommand, 'a'
+    mAssertEq passengersNormal, 2, "a picks up the waiting civilians"
+
+    call ResetLoopTestState
+    INVOKE HandleCommand, 'q'
+    movzx eax, quitRequested
+    mAssertEq eax, 1, "q sets quitRequested"
+
+    call ResetLoopTestState
+    INVOKE HandleCommand, 'B'
+    mAssertEq eax, 1, "B is a command"
+
+    call ResetLoopTestState
+    INVOKE HandleCommand, 'Z'
+    mAssertEq eax, 0, "Z is ignored"
+    INVOKE HandleCommand, '7'
+    mAssertEq eax, 0, "7 is ignored"
+    mAssertEq elevatorFloor, LOBBY, "ignored keys do not move"
+    mAssertEq energy, 100, "ignored keys use no energy"
+    ret
+TestHandleCommand ENDP
+
+;---------------------------------------------------------------------
 ; TestGameLoop  -  suite entry point (called from TestMain.asm)
 ;---------------------------------------------------------------------
 TestGameLoop PROC
@@ -151,6 +195,7 @@ TestGameLoop PROC
     call TestRoundAllCleared
     call TestRoundQuit
     call TestRoundOutOfEnergy
+    call TestHandleCommand
     call ResetLoopTestState
     ret
 TestGameLoop ENDP
