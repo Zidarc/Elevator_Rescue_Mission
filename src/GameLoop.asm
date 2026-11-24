@@ -4,8 +4,8 @@
 ;
 ;   CheckRoundOver   decides whether the current round has ended
 ;   HandleCommand    W/S/A/X/B/Q key dispatcher
-;
-; RunRound and RunGame follow in this module.
+;   RunRound         real-time loop: ReadKey + GetMseconds tick
+;   RunGame          difficulty, then rounds 1..MAX_ROUNDS
 ;=====================================================================
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
@@ -162,5 +162,85 @@ commandDone:
     mov  eax, 1
     ret
 HandleCommand ENDP
+
+;---------------------------------------------------------------------
+; RunRound
+; The real-time loop for one round. Never blocks:
+;   - ReadKey polls the keyboard (ZF = 1 when no key is waiting)
+;   - GetMseconds is compared with lastTickMs; every TICK_MS one
+;     second is taken off every waiting floor (TickFloors)
+;   - the screen is redrawn only after a key or a tick
+; Receives: a building prepared by InitializeGame
+; Returns:  when CheckRoundOver reports the round has ended
+;---------------------------------------------------------------------
+RunRound PROC USES eax ebx
+    call Clrscr
+    call GetMseconds
+    mov  lastTickMs, eax
+    call DrawGameState
+
+frameLoop:
+    xor  ebx, ebx                       ; EBX = 1 when a redraw is needed
+    mov  eax, FRAME_DELAY_MS
+    call Delay
+
+    ; --- keyboard ---
+    call ReadKey
+    jz   checkTimer                     ; no key waiting
+    movzx eax, al
+    INVOKE HandleCommand, eax
+    or   ebx, eax                       ; redraw if it was a command
+
+checkTimer:
+    call GetMseconds
+    sub  eax, lastTickMs                ; ms since the last tick
+    cmp  eax, TICK_MS
+    jb   checkEnd
+    add  lastTickMs, TICK_MS
+    call TickFloors
+    mov  ebx, 1
+
+checkEnd:
+    call CheckRoundOver
+    test eax, eax
+    jnz  roundFinished
+    test ebx, ebx
+    jz   frameLoop
+    call DrawGameState
+    jmp  frameLoop
+
+roundFinished:
+    call DrawGameState
+    call Crlf
+    call Crlf
+    call WaitMsg
+    ret
+RunRound ENDP
+
+;---------------------------------------------------------------------
+; RunGame
+; One full game: choose a difficulty, then play up to MAX_ROUNDS
+; rounds. Q ends the game after the current round.
+; Receives: nothing   Returns: nothing
+;---------------------------------------------------------------------
+RunGame PROC USES eax
+    call Clrscr
+    call SelectDifficulty
+    call ResetGameState
+
+roundLoop:
+    call InitializeGame
+    call RunRound
+    cmp  quitRequested, 0
+    jne  gameOver
+    mov  eax, roundNum
+    cmp  eax, MAX_ROUNDS
+    jae  gameOver
+    inc  roundNum
+    jmp  roundLoop
+
+gameOver:
+    ret
+RunGame ENDP
 
 END
