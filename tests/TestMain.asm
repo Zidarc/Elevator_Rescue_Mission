@@ -15,6 +15,8 @@ INCLUDE TestFramework.inc
 
 TestStrUtil   PROTO
 TestGameState PROTO
+TestBuilding  PROTO
+TestElevator  PROTO
 
 .data
 headerMsg   BYTE "Elevator Rescue Simulator - test runner", 0Dh, 0Ah, 0
@@ -28,8 +30,8 @@ testMain PROC
 
     call TestStrUtil                    ; Day 1
     call TestGameState                  ; Day 1
-    ; call TestBuilding                 ; Day 2
-    ; call TestElevator                 ; Day 3
+    call TestBuilding                   ; Day 2
+    call TestElevator                   ; Day 3
     ; call TestScan                     ; Day 4
     ; call TestScore                    ; Day 6
     ; call TestScoreboard               ; Day 7
