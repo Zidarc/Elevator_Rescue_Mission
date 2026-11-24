@@ -1,0 +1,213 @@
+;=====================================================================
+; test_scan.asm
+; Tests for ScanAction and ScanFloorsRecursive (README section 17,
+; "Scan and round end").
+;
+; Fixture building used by every test (total waiting = 5):
+;   floor 2  normal,   3 civilians
+;   floor 5  critical, 2 civilians
+;   floor 7  expired   (civilians lost, must not be counted)
+;   floor 8  energy pack
+;=====================================================================
+INCLUDE Irvine32.inc
+INCLUDE Elevator.inc
+INCLUDE TestFramework.inc
+
+FIXTURE_TOTAL = 5
+MIDDLE_FLOOR  = 5
+
+.code
+;---------------------------------------------------------------------
+; FloorPtr  (helper)
+; Receives: EAX = floor index
+; Returns:  ESI = OFFSET floors[EAX]
+;---------------------------------------------------------------------
+FloorPtr PROC USES eax edx
+    mov  edx, SIZEOF FloorInfo
+    mul  edx
+    mov  esi, OFFSET floors
+    add  esi, eax
+    ret
+FloorPtr ENDP
+
+;---------------------------------------------------------------------
+; ResetScanTestState  (helper)
+; Clears the building, then builds the fixture described above.
+; Receives: nothing   Returns: nothing
+;---------------------------------------------------------------------
+ResetScanTestState PROC USES eax ecx esi
+    mov  difficulty, DIFF_NORMAL
+    mov  elevatorFloor, LOBBY
+    mov  energy, 100
+
+    mov  esi, OFFSET floors
+    mov  ecx, NUM_FLOORS
+clearFloor:
+    mov  (FloorInfo PTR [esi]).civilians, 0
+    mov  (FloorInfo PTR [esi]).floorFlags, 0
+    mov  (FloorInfo PTR [esi]).ttlLeft, 0
+    mov  (FloorInfo PTR [esi]).ttlStart, 0
+    add  esi, SIZEOF FloorInfo
+    loop clearFloor
+
+    mov  eax, 2
+    call FloorPtr
+    mov  (FloorInfo PTR [esi]).civilians, 3
+    mov  (FloorInfo PTR [esi]).floorFlags, FLAG_CIVILIANS
+
+    mov  eax, 5
+    call FloorPtr
+    mov  (FloorInfo PTR [esi]).civilians, 2
+    mov  (FloorInfo PTR [esi]).floorFlags, FLAG_CIVILIANS OR FLAG_CRITICAL
+
+    mov  eax, 7
+    call FloorPtr
+    mov  (FloorInfo PTR [esi]).floorFlags, FLAG_EXPIRED
+
+    mov  eax, 8
+    call FloorPtr
+    mov  (FloorInfo PTR [esi]).floorFlags, FLAG_ENERGY
+    ret
+ResetScanTestState ENDP
+
+;---------------------------------------------------------------------
+; CountScannedFloors  (helper)
+; Returns: EAX = number of floors with FLAG_SCANNED set
+;---------------------------------------------------------------------
+CountScannedFloors PROC USES ecx esi
+    xor  eax, eax
+    mov  esi, OFFSET floors
+    mov  ecx, NUM_FLOORS
+countLoop:
+    test (FloorInfo PTR [esi]).floorFlags, FLAG_SCANNED
+    jz   notScanned
+    inc  eax
+notScanned:
+    add  esi, SIZEOF FloorInfo
+    loop countLoop
+    ret
+CountScannedFloors ENDP
+
+;---------------------------------------------------------------------
+; TestScanTotals
+; The total is the same wherever the scan starts.
+;---------------------------------------------------------------------
+TestScanTotals PROC USES eax
+    call ResetScanTestState
+    mov  elevatorFloor, LOBBY
+    call ScanAction
+    mAssertEq eax, FIXTURE_TOTAL, "scan from the lobby finds 5"
+
+    call ResetScanTestState
+    mov  elevatorFloor, TOP_FLOOR
+    call ScanAction
+    mAssertEq eax, FIXTURE_TOTAL, "scan from the top floor finds 5"
+
+    call ResetScanTestState
+    mov  elevatorFloor, MIDDLE_FLOOR
+    call ScanAction
+    mAssertEq eax, FIXTURE_TOTAL, "scan from the middle finds 5"
+    ret
+TestScanTotals ENDP
+
+;---------------------------------------------------------------------
+; TestScanFlagsAndCost
+; Every floor is revealed and SCAN_COST energy is charged once.
+;---------------------------------------------------------------------
+TestScanFlagsAndCost PROC USES eax
+    call ResetScanTestState
+    mov  elevatorFloor, MIDDLE_FLOOR
+    mov  energy, 100
+    call ScanAction
+    call CountScannedFloors
+    mAssertEq eax, NUM_FLOORS, "scan sets FLAG_SCANNED on all 10 floors"
+    mAssertEq energy, 100 - SCAN_COST, "scan costs SCAN_COST energy"
+
+    ; flags that were already there survive the scan
+    mov  eax, 5
+    call FloorPtr
+    movzx eax, (FloorInfo PTR [esi]).floorFlags
+    and  eax, FLAG_CRITICAL
+    mAssertEq eax, FLAG_CRITICAL, "scan keeps FLAG_CRITICAL"
+    ret
+TestScanFlagsAndCost ENDP
+
+;---------------------------------------------------------------------
+; TestScanNoEnergy
+; Refused below SCAN_COST: no energy used and nothing revealed.
+;---------------------------------------------------------------------
+TestScanNoEnergy PROC USES eax
+    call ResetScanTestState
+    mov  energy, SCAN_COST - 1
+    call ScanAction
+    mAssertEq eax, 0FFFFFFFFh, "scan refused without enough energy"
+    mAssertEq energy, SCAN_COST - 1, "refused scan uses no energy"
+    call CountScannedFloors
+    mAssertEq eax, 0, "refused scan reveals nothing"
+
+    call ResetScanTestState
+    mov  energy, SCAN_COST
+    call ScanAction
+    mAssertEq eax, FIXTURE_TOTAL, "scan allowed with exactly SCAN_COST"
+    mAssertEq energy, 0, "energy is 0 after that scan"
+    ret
+TestScanNoEnergy ENDP
+
+;---------------------------------------------------------------------
+; TestScanRecursiveDirect
+; Calls ScanFloorsRecursive directly: partial ranges, both base
+; cases, and stack / register balance after the recursion.
+;---------------------------------------------------------------------
+TestScanRecursiveDirect PROC USES eax ebx ecx edx esi edi
+    call ResetScanTestState
+
+    push 1                              ; up from floor 3: floor 5 only
+    push 3
+    call ScanFloorsRecursive
+    mAssertEq eax, 2, "recursive scan up from floor 3 finds 2"
+
+    push -1                             ; down from floor 5: floors 5 and 2
+    push 5
+    call ScanFloorsRecursive
+    mAssertEq eax, 5, "recursive scan down from floor 5 finds 5"
+
+    push -1                             ; base case below the lobby
+    push -1
+    call ScanFloorsRecursive
+    mAssertEq eax, 0, "recursive scan below the lobby returns 0"
+
+    push 1                              ; base case above the top floor
+    push NUM_FLOORS
+    call ScanFloorsRecursive
+    mAssertEq eax, 0, "recursive scan above the top returns 0"
+
+    ; --- ESP and the preserved registers are unchanged ---
+    mov  ebx, 11111111h
+    mov  ecx, 22222222h
+    mov  esi, 33333333h
+    mov  edi, esp                       ; ESP before
+    push 1
+    push LOBBY
+    call ScanFloorsRecursive            ; deepest recursion: 11 levels
+    mov  edx, esp
+    mAssertEq edx, edi, "ESP is the same after the recursive call"
+    mAssertEq ebx, 11111111h, "EBX preserved by the recursion"
+    mAssertEq ecx, 22222222h, "ECX preserved by the recursion"
+    mAssertEq esi, 33333333h, "ESI preserved by the recursion"
+    ret
+TestScanRecursiveDirect ENDP
+
+;---------------------------------------------------------------------
+; TestScan  -  suite entry point (called from TestMain.asm)
+;---------------------------------------------------------------------
+TestScan PROC
+    mSuite "Scan"
+    call TestScanTotals
+    call TestScanFlagsAndCost
+    call TestScanNoEnergy
+    call TestScanRecursiveDirect
+    call ResetScanTestState             ; leave a clean building behind
+    ret
+TestScan ENDP
+
+END
