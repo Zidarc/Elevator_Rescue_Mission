@@ -21,7 +21,6 @@ menuOptions BYTE "    1. New Game", 0Dh, 0Ah
             BYTE "  Select an option: ", 0
 
 msgNotReady BYTE 0Dh, 0Ah, 0Dh, 0Ah, "  This option is not implemented yet.", 0Dh, 0Ah, 0
-msgNewGame  BYTE "  New Game arrives on Day 4 (GameLoop.asm).", 0Dh, 0Ah, 0
 msgScores   BYTE "  High Scores arrive on Day 7 (Scoreboard.asm).", 0Dh, 0Ah, 0
 
 howToPlay   BYTE "  HOW TO PLAY", 0Dh, 0Ah
@@ -73,11 +72,7 @@ menuLoop:
     jmp  menuLoop                       ; ignore any other key
 
 optNewGame:
-    mov  edx, OFFSET msgNotReady
-    call WriteString
-    mov  edx, OFFSET msgNewGame
-    call WriteString
-    call WaitMsg
+    INVOKE RunGame
     jmp  menuLoop
 
 optScores:
