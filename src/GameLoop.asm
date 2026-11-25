@@ -18,9 +18,19 @@ KEY_SHOP   = 'B'
 KEY_QUIT   = 'Q'
 CASE_MASK  = 11011111b                  ; clears bit 5: lower -> upper case
 
+TONE_RESCUE = 880
+TONE_LOST   = 220
+TONE_ROUND  = 660
+TONE_SHORT  = 60
+TONE_LONG   = 250
+
+Beep PROTO, dwFreq:DWORD, dwDuration:DWORD
+
 .data
 msgOutOfEnergy  BYTE "Out of energy. The round is over.", 0
 msgAllCleared   BYTE "Building cleared. The round is over.", 0
+heardRescued    DWORD 0
+heardLost       DWORD 0
 
 .code
 ;---------------------------------------------------------------------
@@ -177,7 +187,26 @@ HandleCommand ENDP
 ; Receives: a building prepared by InitializeGame
 ; Returns:  when CheckRoundOver reports the round has ended
 ;---------------------------------------------------------------------
+PlayEventSounds PROC USES eax ecx edx
+    mov  eax, rescuedNormal
+    add  eax, rescuedCritical
+    cmp  eax, heardRescued
+    je   checkLost
+    mov  heardRescued, eax
+    INVOKE Beep, TONE_RESCUE, TONE_SHORT
+checkLost:
+    mov  eax, casualties
+    cmp  eax, heardLost
+    je   soundsDone
+    mov  heardLost, eax
+    INVOKE Beep, TONE_LOST, TONE_SHORT
+soundsDone:
+    ret
+PlayEventSounds ENDP
+
 RunRound PROC USES eax ebx edx
+    mov  heardRescued, 0
+    mov  heardLost, 0
     call ClearGameScreen
     call GetMseconds
     mov  lastTickMs, eax
@@ -217,6 +246,7 @@ checkEnd:
     jnz  roundFinished
     test ebx, ebx
     jz   frameLoop
+    call PlayEventSounds
     call CalcRoundScore
     call DrawGameState
     jmp  frameLoop
@@ -231,7 +261,7 @@ RunRound ENDP
 ; rounds. Q ends the game after the current round.
 ; Receives: nothing   Returns: nothing
 ;---------------------------------------------------------------------
-RunGame PROC USES eax
+RunGame PROC USES eax ecx edx
     call Clrscr
     call SelectDifficulty
     call ResetGameState
@@ -239,6 +269,7 @@ RunGame PROC USES eax
 roundLoop:
     call InitializeGame
     call RunRound
+    INVOKE Beep, TONE_ROUND, TONE_LONG
     call CalcRoundScore
     add  totalScore, eax
     mov  eax, rescuedNormal
