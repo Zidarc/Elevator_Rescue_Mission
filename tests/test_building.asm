@@ -1,10 +1,7 @@
-;=====================================================================
-; test_building.asm  -  tests for src/Building.asm
-;
-; Random procedures are checked on their RANGE (many calls, count the
-; ones that fall outside), never on exact values.
-; SelectDifficulty reads the keyboard, so it is tested by hand.
-;=====================================================================
+; test_building.asm - tests for Building.asm.
+; Random functions are called many times and every result is checked
+; to be inside the allowed range (we can not test exact random values).
+; SelectDifficulty needs the keyboard, so it is tested by hand.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 INCLUDE TestFramework.inc
@@ -22,10 +19,7 @@ bldBadEnergy    DWORD 0
 bldBadEmpty     DWORD 0
 
 .code
-;---------------------------------------------------------------------
-; TestRollFloorType
-; 1000 rolls on Normal: all results are valid and all four types occur.
-;---------------------------------------------------------------------
+; 1000 rolls: every result is a valid floor type and all four types appear.
 TestRollFloorType PROC USES eax ebx ecx edx
     mov  difficulty, DIFF_NORMAL
     xor  ebx, ebx                       ; EBX = results out of range
@@ -48,12 +42,7 @@ rollNext:
     ret
 TestRollFloorType ENDP
 
-;---------------------------------------------------------------------
-; TestFloorContents
-; 800 generated floors on Normal, round 1. Every floor must match its
-; type: flags, civilian count and TTL range (Normal table: 30..60,
-; critical = half of that = 15..30).
-;---------------------------------------------------------------------
+; 800 random floors: each one has the right flags, people count and TTL range for its type.
 TestFloorContents PROC USES eax ebx ecx edx esi
     mov  difficulty, DIFF_NORMAL
     mov  roundNum, 1
@@ -79,7 +68,7 @@ floorLoop:
     test al, FLAG_ENERGY
     jnz  checkEnergy
 
-    ; --- empty floor: no flags, no civilians, no TTL ---
+    ; empty floor: no flags, no civilians, no TTL
     or   bldSeenMask, 1000b
     or   eax, ebx
     or   eax, edx
@@ -149,13 +138,7 @@ floorNext:
     ret
 TestFloorContents ENDP
 
-;---------------------------------------------------------------------
-; CountTtlOutOfRange  (private helper)
-; Generates TTL_COUNT floors and counts those with a TTL (not 0)
-; outside [lowTtl, highTtl].
-; Receives: lowTtl, highTtl, difficulty and roundNum (globals)
-; Returns:  EAX = number of floors out of range
-;---------------------------------------------------------------------
+; Makes many floors and counts how many have a TTL outside lowTtl..highTtl. EAX = count.
 CountTtlOutOfRange PROC USES ebx ecx esi, lowTtl:DWORD, highTtl:DWORD
     mov  esi, OFFSET floors
     add  esi, TEST_FLOOR * SIZEOF FloorInfo
@@ -179,10 +162,7 @@ countNext:
     ret
 CountTtlOutOfRange ENDP
 
-;---------------------------------------------------------------------
-; TestTtlRules
-; Difficulty ranges, the per-round penalty and the MIN_TTL floor.
-;---------------------------------------------------------------------
+; TTL ranges for each difficulty, the round penalty and the 10 second minimum.
 TestTtlRules PROC USES eax
     ; Easy, round 1: normal 45..75, critical 22..37 -> 22..75
     mov  difficulty, DIFF_EASY
@@ -207,10 +187,7 @@ TestTtlRules PROC USES eax
     ret
 TestTtlRules ENDP
 
-;---------------------------------------------------------------------
-; TestLobbyEmpty
-; The lobby is cleared even if it held something before.
-;---------------------------------------------------------------------
+; The lobby is always generated empty.
 TestLobbyEmpty PROC USES eax ebx ecx
     mov  difficulty, DIFF_NORMAL
     mov  roundNum, 1
@@ -231,15 +208,12 @@ lobbyNext:
     ret
 TestLobbyEmpty ENDP
 
-;---------------------------------------------------------------------
-; TestInitializeGame
-; New building, per-round reset, and the energy refill of rounds 2-3.
-;---------------------------------------------------------------------
+; A new round resets the counters and adds the energy refill from round 2.
 TestInitializeGame PROC USES eax ebx ecx esi
     mov  difficulty, DIFF_NORMAL
     mov  roundNum, 1
 
-    ; --- dirty every floor and the round state first ---
+    ; dirty every floor and the round state first
     mov  esi, OFFSET floors
     mov  ecx, NUM_FLOORS
 dirtyLoop:
@@ -260,7 +234,7 @@ dirtyLoop:
 
     call InitializeGame
 
-    ; --- count floors that still look dirty ---
+    ; count floors that still look dirty
     mov  esi, OFFSET floors
     xor  ebx, ebx                       ; EBX = leftovers
     mov  ecx, NUM_FLOORS
@@ -292,7 +266,7 @@ checkNext:
     mAssertEq eax, 0, "roundOver cleared"
     mAssertEq energy, 100, "round 1 keeps the starting energy"
 
-    ; --- energy refill in later rounds ---
+    ; energy refill in later rounds
     mov  roundNum, 2
     mov  energy, 100
     call InitializeGame
@@ -307,9 +281,7 @@ checkNext:
     ret
 TestInitializeGame ENDP
 
-;---------------------------------------------------------------------
-; TestBuilding  -  runs every Building suite
-;---------------------------------------------------------------------
+; Runs all Building tests.
 TestBuilding PROC
     mSuite "Building"
     call TestRollFloorType

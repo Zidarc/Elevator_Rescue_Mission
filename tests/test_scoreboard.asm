@@ -1,3 +1,4 @@
+; test_scoreboard.asm - tests for the high-score table and the file.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 INCLUDE TestFramework.inc
@@ -14,6 +15,7 @@ tsLongName  BYTE "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0
 tsJunk      BYTE "this is not a score file at all", 0
 
 .code
+; Fills the table with 10 scores.
 FillTenScores PROC USES eax ecx
     call ClearScores
     mov  ecx, 1000
@@ -24,6 +26,7 @@ fillLoop:
     ret
 FillTenScores ENDP
 
+; New scores go to the right place and whole records move with their names.
 TestInsertPositions PROC USES eax
     call ClearScores
     INVOKE InsertScoreSorted, ADDR tsNameA, 500, DIFF_EASY, 3
@@ -54,6 +57,8 @@ TestInsertPositions PROC USES eax
     ret
 TestInsertPositions ENDP
 
+; Full table: low scores are rejected, a new best pushes out the 10th,
+; equal scores go below, long names are cut to 15 letters.
 TestInsertFullTable PROC USES eax
     call FillTenScores
     mAssertEq highScoreCount, MAX_SCORES, "table holds 10"
@@ -86,6 +91,7 @@ TestInsertFullTable PROC USES eax
     ret
 TestInsertFullTable ENDP
 
+; Save then load gives the same table; a missing or damaged file gives an empty table.
 TestScoreFile PROC USES eax ebx ecx edx
     call FillTenScores
     INVOKE InsertScoreSorted, ADDR tsNameC, 950, DIFF_HARD, 3
@@ -126,6 +132,7 @@ TestScoreFile PROC USES eax ebx ecx edx
     ret
 TestScoreFile ENDP
 
+; Runs all Scoreboard tests.
 TestScoreboard PROC
     mSuite "Scoreboard"
     call TestInsertPositions

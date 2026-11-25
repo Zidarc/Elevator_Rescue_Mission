@@ -1,14 +1,4 @@
-;=====================================================================
-; TestMain.asm
-; Test runner entry point. Calls every test suite, prints a summary
-; and exits with the number of failed assertions (0 = all passed),
-; so build.bat can report success or failure.
-;
-; Adding a suite:
-;   1. Create tests/test_<module>.asm with a "Test<Module> PROC".
-;   2. Add a PROTO below and a "call Test<Module>" in testMain.
-;   build.bat picks up every .asm in tests/ automatically.
-;=====================================================================
+; TestMain.asm - starts the test program.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 INCLUDE TestFramework.inc
@@ -30,15 +20,17 @@ failedMsg   BYTE "   Failed: ", 0
 newLine     BYTE 0Dh, 0Ah, 0
 
 .code
+; Runs every test group, prints how many passed and failed, and exits
+; with the number of failures (0 = everything passed). build.bat reads it.
 testMain PROC
     INVOKE TPrint, ADDR headerMsg
 
-    call TestStrUtil                    ; Day 1
-    call TestGameState                  ; Day 1
-    call TestBuilding                   ; Day 2
-    call TestElevator                   ; Day 3
-    call TestScan                       ; Day 4
-    call TestGameLoop                   ; Day 4
+    call TestStrUtil
+    call TestGameState
+    call TestBuilding
+    call TestElevator
+    call TestScan
+    call TestGameLoop
     call TestRender
     call TestScore
     call TestScoreboard

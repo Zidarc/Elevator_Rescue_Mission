@@ -1,15 +1,6 @@
-;=====================================================================
-; Building.asm
-; Difficulty selection and building generation.
-;
-;   SelectDifficulty  asks the player for Easy / Normal / Hard
-;   RollFloorType     random floor type from the difficulty table
-;   GenerateFloor     fills one floors[] entry
-;   InitializeGame    builds a whole new building for roundNum
-;
-; Only SelectDifficulty prints (it is a menu). Everything else just
-; updates the global state.
-;=====================================================================
+; Building.asm - makes a new random building at the start of every round.
+; Decides for each floor whether it has normal people, critical people,
+; an energy pack or nothing, and how many seconds (TTL) the people have.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 
@@ -25,12 +16,7 @@ diffMenu    BYTE "  =========================================", 0Dh, 0Ah
             BYTE "  Select a level: ", 0
 
 .code
-;---------------------------------------------------------------------
-; SelectDifficulty
-; Shows the difficulty menu and waits for 1, 2 or 3.
-; Receives: nothing
-; Returns:  difficulty = DIFF_EASY / DIFF_NORMAL / DIFF_HARD
-;---------------------------------------------------------------------
+; Shows the Easy / Normal / Hard menu and saves the choice in "difficulty".
 SelectDifficulty PROC USES eax edx
 selectLoop:
     call Clrscr
@@ -58,16 +44,12 @@ selectDone:
     ret
 SelectDifficulty ENDP
 
-;---------------------------------------------------------------------
-; RollFloorType
-; Rolls 0..99 and compares it against cumulative limits:
-;   below criticalPct                       -> FT_CRITICAL
-;   below + ENERGY_FLOOR_PCT                -> FT_ENERGY
-;   below + EMPTY_FLOOR_PCT                 -> FT_EMPTY
-;   otherwise                               -> FT_NORMAL
-; Receives: difficulty (global)
-; Returns:  EAX = FT_EMPTY / FT_NORMAL / FT_CRITICAL / FT_ENERGY
-;---------------------------------------------------------------------
+; Randomly decides what a floor will be. Rolls a number 0-99:
+;   below criticalPct            -> critical floor
+;   next 20                      -> energy pack
+;   next 15                      -> empty
+;   the rest                     -> normal floor
+; criticalPct comes from the difficulty, so Hard has more critical floors.
 RollFloorType PROC USES ebx esi
     call GetDiffSetting                 ; ESI = current DiffSetting
     mov  ebx, (DiffSetting PTR [esi]).criticalPct   ; EBX = running limit
@@ -97,12 +79,7 @@ rollDone:
     ret
 RollFloorType ENDP
 
-;---------------------------------------------------------------------
-; RandomBaseTtl  (private helper)
-; Random TTL in [ttlMin, ttlMax] of the current difficulty.
-; Receives: difficulty (global)
-; Returns:  EAX = seconds
-;---------------------------------------------------------------------
+; Random number of seconds between ttlMin and ttlMax of the difficulty.
 RandomBaseTtl PROC USES esi
     call GetDiffSetting                 ; ESI = current DiffSetting
     mov  eax, (DiffSetting PTR [esi]).ttlMax
@@ -113,13 +90,8 @@ RandomBaseTtl PROC USES esi
     ret
 RandomBaseTtl ENDP
 
-;---------------------------------------------------------------------
-; ApplyRoundPenalty  (private helper)
-; Subtracts ROUND_TTL_STEP * (roundNum - 1) seconds from a TTL and
-; never lets the result drop below MIN_TTL.
-; Receives: EAX = TTL in seconds, roundNum (global, 1..MAX_ROUNDS)
-; Returns:  EAX = reduced TTL
-;---------------------------------------------------------------------
+; Makes later rounds harder: takes 5 seconds off the TTL for every round
+; after the first, but never goes below MIN_TTL (10 seconds).
 ApplyRoundPenalty PROC USES ebx ecx edx
     mov  ebx, eax                       ; EBX = TTL
     mov  eax, roundNum
@@ -138,20 +110,12 @@ penaltyDone:
     ret
 ApplyRoundPenalty ENDP
 
-;---------------------------------------------------------------------
-; GenerateFloor
-; Clears floors[floorIndex], then fills it from a random floor type:
-;   Normal   1-4 civilians, FLAG_CIVILIANS, TTL in [ttlMin, ttlMax]
-;   Critical 1-2 civilians, FLAG_CIVILIANS + FLAG_CRITICAL,
-;            TTL = base TTL SHR 1
-;   Energy   FLAG_ENERGY, no civilians, no TTL
-;   Empty    nothing
-; From round 2 every TTL is reduced by ROUND_TTL_STEP per round and
-; is never below MIN_TTL. ttlStart is set equal to ttlLeft.
-; The lobby is always left empty. FLAG_SCANNED is never set here.
-; Receives: floorIndex = 0..TOP_FLOOR
-; Returns:  nothing (all registers preserved)
-;---------------------------------------------------------------------
+; Fills one floor of the building with random contents.
+;   normal:   1-4 people, random TTL
+;   critical: 1-2 people, half the TTL (SHR 1 = divide by 2)
+;   energy:   an energy pack, no timer
+;   empty:    nothing
+; The lobby (floor 0) is always empty.
 GenerateFloor PROC USES eax ebx ecx edx esi edi, floorIndex:DWORD
     mov  eax, floorIndex
     mov  ecx, SIZEOF FloorInfo
@@ -208,18 +172,10 @@ generateDone:
     ret
 GenerateFloor ENDP
 
-;---------------------------------------------------------------------
-; InitializeGame
-; Builds a new building for the current round and resets the
-; per-round state. Credits, capacity and score carry over.
-;   - every floor generated (lobby empty, nothing scanned)
-;   - elevator back at the lobby, nobody on board
-;   - round score, rescued and casualty counters, roundOver cleared
-;   - rounds 2 and 3: energy + ROUND_ENERGY_REFILL (max MAX_ENERGY)
-; lastTickMs is NOT touched: the game loop sets it when it starts.
-; Receives: roundNum, difficulty (globals)
-; Returns:  nothing (all registers preserved)
-;---------------------------------------------------------------------
+; Builds a new building for the round: generates all 10 floors, puts the
+; elevator back in the lobby and clears this round's counters.
+; From round 2 the player also gets +40 energy (max 150).
+; Credits, capacity and total score carry over between rounds.
 InitializeGame PROC USES eax ecx
     xor  ecx, ecx                       ; ECX = floor index
 buildLoop:

@@ -1,11 +1,7 @@
-;=====================================================================
-; TestFramework.asm
-; Pass / fail counters, AssertEq (used by mAssertEq) and output helpers.
-;
-; Test output goes through WriteFile on the standard output handle,
-; not Irvine's WriteString (which uses WriteConsole and prints nothing
-; when the output is redirected to a file or a pipe).
-;=====================================================================
+; TestFramework.asm - our small testing tool written in assembly.
+; Counts passed and failed checks and prints PASS / FAIL lines.
+; It prints with WriteFile instead of WriteString so the output still
+; shows when it is redirected to a file.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 INCLUDE TestFramework.inc
@@ -25,10 +21,7 @@ newLine     BYTE 0Dh, 0Ah, 0
 numBuffer   BYTE 12 DUP(0)
 
 .code
-;---------------------------------------------------------------------
-; TPrint - writes a null-terminated string to standard output.
-; Receives: pStr.  Preserves all registers.
-;---------------------------------------------------------------------
+; Prints a string to the standard output.
 TPrint PROC USES eax ecx edx, pStr:PTR BYTE
     cmp  stdOutHandle, 0
     jne  haveHandle
@@ -40,11 +33,7 @@ haveHandle:
     ret
 TPrint ENDP
 
-;---------------------------------------------------------------------
-; TPrintInt - writes a signed DWORD in decimal.
-; Converts by repeated division by 10, filling numBuffer from the end.
-; Receives: value.  Preserves all registers.
-;---------------------------------------------------------------------
+; Prints a signed number (dividing by 10 to get each digit).
 TPrintInt PROC USES eax ebx ecx edx edi, value:SDWORD
     mov  edi, OFFSET numBuffer + (SIZEOF numBuffer - 1)
     mov  BYTE PTR [edi], 0              ; terminator
@@ -72,11 +61,8 @@ printIt:
     ret
 TPrintInt ENDP
 
-;---------------------------------------------------------------------
-; AssertEq
-; Compares two DWORDs, prints PASS / FAIL and updates the counters.
-; Preserves every general-purpose register.
-;---------------------------------------------------------------------
+; The main check: compares the actual value with the expected one,
+; prints PASS or FAIL with the description and updates the counters.
 AssertEq PROC USES eax, actual:DWORD, expected:DWORD, pDesc:PTR BYTE
     mov  eax, actual
     cmp  eax, expected
@@ -112,9 +98,7 @@ finished:
     ret
 AssertEq ENDP
 
-;---------------------------------------------------------------------
-; PrintSuite - prints "== name" in yellow.
-;---------------------------------------------------------------------
+; Prints the name of a group of tests, like "== Scoreboard".
 PrintSuite PROC USES eax, pName:PTR BYTE
     mov  eax, yellow + (black * 16)
     call SetTextColor

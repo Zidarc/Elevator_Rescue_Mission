@@ -1,17 +1,11 @@
-;=====================================================================
-; test_elevator.asm
-; Tests for MoveElevator, PerformAction and TickFloors.
-;=====================================================================
+; test_elevator.asm - tests for MoveElevator, PerformAction and TickFloors.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 INCLUDE TestFramework.inc
 
 .code
 
-;---------------------------------------------------------------------
-; Helper: ResetElevatorTestState
-; Sets globals to a known baseline for every test.
-;---------------------------------------------------------------------
+; Puts every variable back to a known starting state before each test.
 ResetElevatorTestState PROC USES eax ecx esi
     mov  difficulty, DIFF_NORMAL
     mov  roundNum, 1
@@ -43,14 +37,9 @@ clearLoop:
     ret
 ResetElevatorTestState ENDP
 
-;=====================================================================
 ; MoveElevator tests
-;=====================================================================
 
-;---------------------------------------------------------------------
-; TestMoveUp
-; A valid upward move from the lobby.
-;---------------------------------------------------------------------
+; Moving up from the lobby works and costs energy.
 TestMoveUp PROC USES eax edx
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -68,10 +57,7 @@ TestMoveUp PROC USES eax edx
     ret
 TestMoveUp ENDP
 
-;---------------------------------------------------------------------
-; TestMoveDown
-; A valid downward move from floor 5.
-;---------------------------------------------------------------------
+; Moving down from floor 5 works.
 TestMoveDown PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 5
@@ -84,10 +70,7 @@ TestMoveDown PROC USES eax
     ret
 TestMoveDown ENDP
 
-;---------------------------------------------------------------------
-; TestMoveUpFromTop
-; Moving up from the top floor is refused. No energy is used.
-;---------------------------------------------------------------------
+; Moving up from the top floor is refused and uses no energy.
 TestMoveUpFromTop PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, TOP_FLOOR
@@ -100,10 +83,7 @@ TestMoveUpFromTop PROC USES eax
     ret
 TestMoveUpFromTop ENDP
 
-;---------------------------------------------------------------------
-; TestMoveDownFromLobby
-; Moving down from the lobby is refused. No energy is used.
-;---------------------------------------------------------------------
+; Moving down from the lobby is refused and uses no energy.
 TestMoveDownFromLobby PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -116,10 +96,7 @@ TestMoveDownFromLobby PROC USES eax
     ret
 TestMoveDownFromLobby ENDP
 
-;---------------------------------------------------------------------
-; TestMoveNoEnergy
-; Moving with not enough energy is refused.
-;---------------------------------------------------------------------
+; Moving with too little energy is refused.
 TestMoveNoEnergy PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 3
@@ -132,10 +109,7 @@ TestMoveNoEnergy PROC USES eax
     ret
 TestMoveNoEnergy ENDP
 
-;---------------------------------------------------------------------
-; TestMoveZeroEnergy
-; Moving with exactly 0 energy is refused.
-;---------------------------------------------------------------------
+; Moving with 0 energy is refused.
 TestMoveZeroEnergy PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 5
@@ -147,10 +121,7 @@ TestMoveZeroEnergy PROC USES eax
     ret
 TestMoveZeroEnergy ENDP
 
-;---------------------------------------------------------------------
-; TestMoveExactEnergy
-; Moving with exactly MOVE_COST energy succeeds and leaves 0.
-;---------------------------------------------------------------------
+; Moving with exactly 2 energy works and leaves 0.
 TestMoveExactEnergy PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 3
@@ -163,14 +134,9 @@ TestMoveExactEnergy PROC USES eax
     ret
 TestMoveExactEnergy ENDP
 
-;=====================================================================
 ; PerformAction tests
-;=====================================================================
 
-;---------------------------------------------------------------------
-; TestPickUpNormal
-; Pick up normal civilians within capacity.
-;---------------------------------------------------------------------
+; Picking up normal people when there is space.
 TestPickUpNormal PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 3
@@ -194,11 +160,7 @@ pickNFlagStillSet:
     ret
 TestPickUpNormal ENDP
 
-;---------------------------------------------------------------------
-; TestPickUpPartialCapacity
-; Pick up when capacity is partially used. Only the remaining space
-; worth of civilians are taken; the rest stay on the floor.
-;---------------------------------------------------------------------
+; Only as many people as the free space are taken; the rest stay on the floor.
 TestPickUpPartialCapacity PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 5
@@ -220,10 +182,7 @@ TestPickUpPartialCapacity PROC USES eax
     ret
 TestPickUpPartialCapacity ENDP
 
-;---------------------------------------------------------------------
-; TestPickUpCritical
-; Critical civilians go to passengersCritical.
-;---------------------------------------------------------------------
+; Critical people are counted as critical passengers.
 TestPickUpCritical PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 7
@@ -241,10 +200,7 @@ TestPickUpCritical PROC USES eax
     ret
 TestPickUpCritical ENDP
 
-;---------------------------------------------------------------------
-; TestPickUpFullElevator
-; Cannot pick up when already at capacity.
-;---------------------------------------------------------------------
+; Nobody is picked up when the elevator is full.
 TestPickUpFullElevator PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 2
@@ -263,11 +219,7 @@ TestPickUpFullElevator PROC USES eax
     ret
 TestPickUpFullElevator ENDP
 
-;---------------------------------------------------------------------
-; TestCollectEnergyPack
-; Collecting an energy pack on a floor adds ENERGY_PACK and clears
-; the FLAG_ENERGY bit.
-;---------------------------------------------------------------------
+; Energy pack gives +25 and is removed from the floor.
 TestCollectEnergyPack PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 4
@@ -283,10 +235,7 @@ TestCollectEnergyPack PROC USES eax
     ret
 TestCollectEnergyPack ENDP
 
-;---------------------------------------------------------------------
-; TestCollectEnergyCapped
-; Collecting an energy pack when close to max is capped at MAX_ENERGY.
-;---------------------------------------------------------------------
+; Energy pack can not take energy above 150.
 TestCollectEnergyCapped PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 4
@@ -299,10 +248,7 @@ TestCollectEnergyCapped PROC USES eax
     ret
 TestCollectEnergyCapped ENDP
 
-;---------------------------------------------------------------------
-; TestDropOffAtLobby
-; Dropping off passengers at the lobby: scoring and credits.
-;---------------------------------------------------------------------
+; Dropping off in the lobby gives the right points and credits.
 TestDropOffAtLobby PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -322,10 +268,7 @@ TestDropOffAtLobby PROC USES eax
     ret
 TestDropOffAtLobby ENDP
 
-;---------------------------------------------------------------------
-; TestDropOffEmpty
-; Dropping off at the lobby with no passengers changes nothing.
-;---------------------------------------------------------------------
+; Dropping off with nobody on board changes nothing.
 TestDropOffEmpty PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -340,10 +283,7 @@ TestDropOffEmpty PROC USES eax
     ret
 TestDropOffEmpty ENDP
 
-;---------------------------------------------------------------------
-; TestDropOffAccumulates
-; Two consecutive drop-offs accumulate correctly.
-;---------------------------------------------------------------------
+; Two drop-offs add up correctly.
 TestDropOffAccumulates PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -362,10 +302,7 @@ TestDropOffAccumulates PROC USES eax
     ret
 TestDropOffAccumulates ENDP
 
-;---------------------------------------------------------------------
-; TestActionOnEmptyFloor
-; Action on a floor with nothing does not crash or change state.
-;---------------------------------------------------------------------
+; Action on an empty floor changes nothing.
 TestActionOnEmptyFloor PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 6
@@ -377,10 +314,7 @@ TestActionOnEmptyFloor PROC USES eax
     ret
 TestActionOnEmptyFloor ENDP
 
-;---------------------------------------------------------------------
-; TestActionOnExpiredFloor
-; Action on an expired floor does nothing useful.
-;---------------------------------------------------------------------
+; Action on an expired floor does nothing.
 TestActionOnExpiredFloor PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 8
@@ -391,14 +325,9 @@ TestActionOnExpiredFloor PROC USES eax
     ret
 TestActionOnExpiredFloor ENDP
 
-;=====================================================================
 ; TickFloors tests
-;=====================================================================
 
-;---------------------------------------------------------------------
-; TestTickDecrement
-; TickFloors decrements ttlLeft by 1 on a floor with civilians.
-;---------------------------------------------------------------------
+; One tick takes 1 second off a floor with people.
 TestTickDecrement PROC USES eax
     call ResetElevatorTestState
     mov  floors[2 * SIZEOF FloorInfo].civilians, 3
@@ -413,10 +342,7 @@ TestTickDecrement PROC USES eax
     ret
 TestTickDecrement ENDP
 
-;---------------------------------------------------------------------
-; TestTickNoDecrementEmpty
-; TickFloors does not change a floor with no civilians.
-;---------------------------------------------------------------------
+; A floor with nobody waiting is not ticked.
 TestTickNoDecrementEmpty PROC USES eax
     call ResetElevatorTestState
     ; floor 3: energy pack, no civilians
@@ -429,11 +355,7 @@ TestTickNoDecrementEmpty PROC USES eax
     ret
 TestTickNoDecrementEmpty ENDP
 
-;---------------------------------------------------------------------
-; TestTickExpiry
-; When TTL reaches 0, civilians become casualties and FLAG_EXPIRED
-; is set.
-;---------------------------------------------------------------------
+; When the timer reaches 0 the people become casualties and the floor is expired.
 TestTickExpiry PROC USES eax
     call ResetElevatorTestState
     ; floor 1: 3 civilians, TTL = 1 (will hit 0 on this tick)
@@ -457,10 +379,7 @@ TestTickExpiry PROC USES eax
     ret
 TestTickExpiry ENDP
 
-;---------------------------------------------------------------------
-; TestTickCriticalExpiry
-; Critical floor expiry clears both FLAG_CIVILIANS and FLAG_CRITICAL.
-;---------------------------------------------------------------------
+; A critical floor that expires loses both the people and the critical flag.
 TestTickCriticalExpiry PROC USES eax
     call ResetElevatorTestState
     mov  floors[4 * SIZEOF FloorInfo].civilians, 2
@@ -478,10 +397,7 @@ TestTickCriticalExpiry PROC USES eax
     ret
 TestTickCriticalExpiry ENDP
 
-;---------------------------------------------------------------------
-; TestTickMultipleFloors
-; Tick multiple floors: one expires, one survives.
-;---------------------------------------------------------------------
+; Two floors ticked together: one expires, one survives.
 TestTickMultipleFloors PROC USES eax
     call ResetElevatorTestState
     ; floor 1: about to expire
@@ -503,10 +419,7 @@ TestTickMultipleFloors PROC USES eax
     ret
 TestTickMultipleFloors ENDP
 
-;---------------------------------------------------------------------
-; TestTickLobbyIgnored
-; The lobby is never ticked even if it had civilians (defensive).
-;---------------------------------------------------------------------
+; The lobby is never ticked.
 TestTickLobbyIgnored PROC USES eax
     call ResetElevatorTestState
     ; dirty the lobby (should never happen, but defensive test)
@@ -521,10 +434,7 @@ TestTickLobbyIgnored PROC USES eax
     ret
 TestTickLobbyIgnored ENDP
 
-;---------------------------------------------------------------------
-; TestTickCasualtiesAccumulate
-; Multiple ticks accumulate casualties correctly.
-;---------------------------------------------------------------------
+; Casualties from several floors add up.
 TestTickCasualtiesAccumulate PROC USES eax
     call ResetElevatorTestState
     ; floor 2: expires on first tick
@@ -543,9 +453,7 @@ TestTickCasualtiesAccumulate PROC USES eax
     ret
 TestTickCasualtiesAccumulate ENDP
 
-;=====================================================================
-; TestElevator  -  runs every Elevator suite
-;=====================================================================
+; Runs all Elevator tests.
 TestElevator PROC
     mSuite "Elevator"
     ; MoveElevator

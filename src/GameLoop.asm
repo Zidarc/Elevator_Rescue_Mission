@@ -1,12 +1,5 @@
-;=====================================================================
-; GameLoop.asm
-; The real-time game loop, input dispatch and round control.
-;
-;   CheckRoundOver   decides whether the current round has ended
-;   HandleCommand    W/S/A/X/B/Q key dispatcher
-;   RunRound         real-time loop: ReadKey + GetMseconds tick
-;   RunGame          difficulty, then rounds 1..MAX_ROUNDS
-;=====================================================================
+; GameLoop.asm - runs the game: the real-time loop, the keys,
+; the sounds, checking when a round ends, and playing the 3 rounds.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 
@@ -33,13 +26,7 @@ heardRescued    DWORD 0
 heardLost       DWORD 0
 
 .code
-;---------------------------------------------------------------------
-; AnyCiviliansWaiting
-; Walks floors 1..TOP_FLOOR looking for waiting civilians.
-; Receives: nothing
-; Returns:  EAX = 1 if any floor still has FLAG_CIVILIANS and at
-;           least one civilian, else 0
-;---------------------------------------------------------------------
+; Looks through floors 1-9. EAX = 1 if anyone is still waiting, else 0.
 AnyCiviliansWaiting PROC USES ecx esi
     mov  esi, OFFSET floors
     add  esi, SIZEOF FloorInfo          ; skip the lobby
@@ -59,29 +46,22 @@ foundWaiting:
     ret
 AnyCiviliansWaiting ENDP
 
-;---------------------------------------------------------------------
-; CheckRoundOver
-; Sets roundOver to 1 when any end condition holds:
-;   1. the player pressed Q (quitRequested = 1)
-;   2. energy is below MOVE_COST: the elevator cannot move any more.
-;      Passengers on board are delivered if it stopped at the lobby
-;      (PerformAction), otherwise they are counted as casualties.
-;   3. nobody is waiting on any floor and the elevator is empty.
-; Using "below MOVE_COST" instead of "= 0" stops the round from
-; getting stuck at 1 energy after an odd-sized energy pack.
-; Receives: nothing (reads globals)
-; Returns:  EAX = roundOver (1 = over, 0 = keep playing)
-;---------------------------------------------------------------------
+; Decides if the round is finished. It ends when:
+;   1. the player pressed Q
+;   2. energy is too low to move (below 2). If the elevator stopped in
+;      the lobby the passengers are saved, anywhere else they are lost.
+;   3. nobody is waiting on any floor and the elevator is empty
+; EAX = 1 if the round is over, 0 to keep playing.
 CheckRoundOver PROC USES ebx
-    ; --- 1. quit ---
+    ; 1. quit
     cmp  quitRequested, 0
     jne  roundEnded
 
-    ; --- 2. out of energy ---
+    ; 2. out of energy
     cmp  energy, MOVE_COST
     jb   outOfEnergy
 
-    ; --- 3. everyone rescued or lost ---
+    ; 3. everyone rescued or lost
     mov  eax, passengersNormal
     add  eax, passengersCritical
     jnz  stillPlaying                   ; people on board
@@ -117,15 +97,11 @@ stillPlaying:
     ret
 CheckRoundOver ENDP
 
-;---------------------------------------------------------------------
-; HandleCommand
-; Dispatches one key press to the matching game action.
-; Lower-case letters are folded to upper case by clearing bit 5
-; (AND CASE_MASK), so 'w' and 'W' do the same thing.
+; Takes one key and runs the matching action:
 ;   W up   S down   A action   X scan   B shop   Q quit
-; Receives: key = ASCII code of the key pressed
-; Returns:  EAX = 1 if the key was a game command, 0 if ignored
-;---------------------------------------------------------------------
+; Small letters are made capital first (AND clears bit 5),
+; so 'w' and 'W' do the same thing.
+; EAX = 1 if it was a game key, 0 if the key is ignored.
 HandleCommand PROC USES ebx, key:DWORD
     mov  ebx, key
     cmp  bl, 'a'
@@ -168,7 +144,7 @@ cmdShop:
     jz   commandDone
     call ClearGameScreen
     call GetMseconds
-    mov  lastTickMs, eax
+    mov  lastTickMs, eax                ; restart the clock: time in the shop is not counted
     jmp  commandDone
 cmdQuit:
     mov  quitRequested, 1
@@ -177,6 +153,9 @@ commandDone:
     ret
 HandleCommand ENDP
 
+; Beeps when something happened since the last check:
+; a high beep when people were rescued, a low beep when people were lost.
+; Beep is a Win32 function: Beep(frequency in Hz, length in ms).
 PlayEventSounds PROC USES eax ecx edx
     mov  eax, rescuedNormal
     add  eax, rescuedCritical
@@ -194,22 +173,17 @@ soundsDone:
     ret
 PlayEventSounds ENDP
 
-;---------------------------------------------------------------------
-; RunRound
-; The real-time loop for one round. Never blocks:
-;   - ReadKey polls the keyboard (ZF = 1 when no key is waiting)
-;   - GetMseconds is compared with lastTickMs; every TICK_MS one
-;     second is taken off every waiting floor (TickFloors)
-;   - the screen is redrawn only after a key or a tick
-; Receives: a building prepared by InitializeGame
-; Returns:  when CheckRoundOver reports the round has ended
-;---------------------------------------------------------------------
+; The real-time loop of one round. It never stops to wait for a key:
+;   - ReadKey checks if a key was pressed (ZF = 1 means no key)
+;   - GetMseconds gives the time in ms; every 1000 ms TickFloors runs
+;   - the screen is redrawn only when something changed
+; Loops until CheckRoundOver says the round is over.
 RunRound PROC USES eax ebx edx
     mov  heardRescued, 0
     mov  heardLost, 0
     call ClearGameScreen
     call GetMseconds
-    mov  lastTickMs, eax
+    mov  lastTickMs, eax                ; start the 1 second clock
     call CalcRoundScore
     call DrawGameState
 
@@ -218,7 +192,7 @@ frameLoop:
     mov  eax, FRAME_DELAY_MS
     call Delay
 
-    ; --- keyboard ---
+    ; keyboard
     call ReadKey
     jz   checkTimer                     ; no key waiting
     movzx eax, al
@@ -229,7 +203,7 @@ checkTimer:
     call GetMseconds
     mov  edx, eax
     sub  eax, lastTickMs                ; ms since the last tick
-    jb   clockWrapped
+    jb   clockWrapped                   ; clock went back to 0 (after midnight)
     cmp  eax, TICK_MS
     jb   checkEnd
     add  lastTickMs, TICK_MS
@@ -238,7 +212,7 @@ checkTimer:
     jmp  checkEnd
 
 clockWrapped:
-    mov  lastTickMs, edx
+    mov  lastTickMs, edx                ; start counting again from now
 
 checkEnd:
     call CheckRoundOver
@@ -246,7 +220,7 @@ checkEnd:
     jnz  roundFinished
     test ebx, ebx
     jz   frameLoop
-    call PlayEventSounds
+    call PlayEventSounds                ; beep if someone was rescued or lost
     call CalcRoundScore
     call DrawGameState
     jmp  frameLoop
@@ -255,12 +229,9 @@ roundFinished:
     ret
 RunRound ENDP
 
-;---------------------------------------------------------------------
-; RunGame
-; One full game: choose a difficulty, then play up to MAX_ROUNDS
-; rounds. Q ends the game after the current round.
-; Receives: nothing   Returns: nothing
-;---------------------------------------------------------------------
+; One full game: choose difficulty, then play up to 3 rounds.
+; After each round the score is calculated and added to the total.
+; Q ends the game early. At the end: summary, then the high-score table.
 RunGame PROC USES eax ecx edx
     call Clrscr
     call SelectDifficulty
@@ -269,15 +240,15 @@ RunGame PROC USES eax ecx edx
 roundLoop:
     call InitializeGame
     call RunRound
-    INVOKE Beep, TONE_ROUND, TONE_LONG
+    INVOKE Beep, TONE_ROUND, TONE_LONG  ; round over sound
     call CalcRoundScore
-    add  totalScore, eax
+    add  totalScore, eax                ; add the round score to the total
     mov  eax, rescuedNormal
     add  eax, rescuedCritical
     add  totalRescued, eax
     mov  eax, casualties
     add  totalLost, eax
-    call ShowRoundOver
+    call ShowRoundOver                  ; show the round result, wait for a key
     cmp  quitRequested, 0
     jne  gameOver
     mov  eax, roundNum
