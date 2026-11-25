@@ -21,6 +21,7 @@ TestScan      PROTO
 TestGameLoop  PROTO
 TestRender    PROTO
 TestScore     PROTO
+TestScoreboard PROTO
 
 .data
 headerMsg   BYTE "Elevator Rescue Simulator - test runner", 0Dh, 0Ah, 0
@@ -40,7 +41,7 @@ testMain PROC
     call TestGameLoop                   ; Day 4
     call TestRender
     call TestScore
-    ; call TestScoreboard               ; Day 7
+    call TestScoreboard
 
     INVOKE TPrint, ADDR summaryMsg
     INVOKE TPrintInt, testsPassed

@@ -13,6 +13,7 @@ consoleTitle BYTE "Elevator Rescue Simulator", 0
 main PROC
     call   Randomize                    ; seed RandomRange / Random32
     INVOKE SetConsoleTitle, ADDR consoleTitle
+    INVOKE LoadScores
     INVOKE RunMainMenu
     exit
 main ENDP
