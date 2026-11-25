@@ -1,7 +1,4 @@
-;=====================================================================
-; test_gameloop.asm
-; Tests for CheckRoundOver (README section 17, "Scan and round end").
-;=====================================================================
+; test_gameloop.asm - tests for CheckRoundOver and HandleCommand.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 INCLUDE TestFramework.inc
@@ -9,11 +6,7 @@ INCLUDE TestFramework.inc
 WAITING_FLOOR = 4
 
 .code
-;---------------------------------------------------------------------
-; ResetLoopTestState  (helper)
-; Empty building except WAITING_FLOOR (2 civilians), elevator at the
-; lobby, empty, full energy, not quitting.
-;---------------------------------------------------------------------
+; Starting state: only floor 4 has people (2), elevator empty in the lobby, 100 energy.
 ResetLoopTestState PROC USES eax ecx esi
     mov  difficulty, DIFF_NORMAL
     mov  elevatorFloor, LOBBY
@@ -45,9 +38,7 @@ clearFloor:
     ret
 ResetLoopTestState ENDP
 
-;---------------------------------------------------------------------
-; ClearWaitingFloor  (helper)  -  nobody waits anywhere any more
-;---------------------------------------------------------------------
+; Removes the waiting people so nobody is left in the building.
 ClearWaitingFloor PROC USES eax esi
     mov  esi, OFFSET floors
     mov  eax, WAITING_FLOOR
@@ -56,9 +47,7 @@ ClearWaitingFloor PROC USES eax esi
     ret
 ClearWaitingFloor ENDP
 
-;---------------------------------------------------------------------
-; TestRoundStillPlaying
-;---------------------------------------------------------------------
+; People waiting or people on board: the round goes on.
 TestRoundStillPlaying PROC USES eax
     call ResetLoopTestState
     call CheckRoundOver
@@ -75,9 +64,7 @@ TestRoundStillPlaying PROC USES eax
     ret
 TestRoundStillPlaying ENDP
 
-;---------------------------------------------------------------------
-; TestRoundAllCleared
-;---------------------------------------------------------------------
+; Nobody waiting and the elevator empty: the round ends.
 TestRoundAllCleared PROC USES eax
     call ResetLoopTestState
     call ClearWaitingFloor
@@ -88,9 +75,7 @@ TestRoundAllCleared PROC USES eax
     ret
 TestRoundAllCleared ENDP
 
-;---------------------------------------------------------------------
-; TestRoundQuit
-;---------------------------------------------------------------------
+; Pressing Q ends the round.
 TestRoundQuit PROC USES eax
     call ResetLoopTestState
     mov  quitRequested, 1
@@ -99,11 +84,7 @@ TestRoundQuit PROC USES eax
     ret
 TestRoundQuit ENDP
 
-;---------------------------------------------------------------------
-; TestRoundOutOfEnergy
-; Energy below MOVE_COST ends the round; passengers are delivered at
-; the lobby and lost anywhere else.
-;---------------------------------------------------------------------
+; Energy below 2 ends the round; passengers are saved in the lobby, lost anywhere else.
 TestRoundOutOfEnergy PROC USES eax
     call ResetLoopTestState
     mov  energy, 0
@@ -142,11 +123,7 @@ TestRoundOutOfEnergy PROC USES eax
     ret
 TestRoundOutOfEnergy ENDP
 
-;---------------------------------------------------------------------
-; TestHandleCommand
-; Each key reaches the right action, in either case; other keys are
-; ignored without changing anything.
-;---------------------------------------------------------------------
+; Each key does the right thing in small and capital letters; other keys are ignored.
 TestHandleCommand PROC USES eax
     call ResetLoopTestState
     INVOKE HandleCommand, 'w'
@@ -189,9 +166,7 @@ TestHandleCommand PROC USES eax
     ret
 TestHandleCommand ENDP
 
-;---------------------------------------------------------------------
-; TestGameLoop  -  suite entry point (called from TestMain.asm)
-;---------------------------------------------------------------------
+; Runs all GameLoop tests.
 TestGameLoop PROC
     mSuite "GameLoop"
     call TestRoundStillPlaying

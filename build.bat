@@ -1,5 +1,4 @@
 @echo off
-rem ====================================================================
 rem  build.bat - builds Elevator Rescue Simulator with MASM + Irvine32
 rem
 rem  Usage:   build.bat            build the game  (build\ElevatorRescue.exe)
@@ -9,7 +8,6 @@ rem           build.bat clean      delete the build folder
 rem
 rem  Needs:   Visual Studio with "Desktop development with C++"
 rem           Irvine32 library in C:\Irvine  (or set IRVINE_DIR first)
-rem ====================================================================
 setlocal EnableDelayedExpansion
 
 set "ROOT=%~dp0"
@@ -31,10 +29,8 @@ if exist "%BUILD%" rmdir /s /q "%BUILD%"
 echo Cleaned.
 exit /b 0
 
-rem --------------------------------------------------------------------
 rem  Find MASM (ml.exe). If it is not on PATH, load the 32-bit
 rem  Visual Studio environment with vcvars32.bat (located via vswhere).
-rem --------------------------------------------------------------------
 :setup
 if not exist "%IRVINE%\Irvine32.inc" (
     echo ERROR: Irvine32 not found in "%IRVINE%". Install it or set IRVINE_DIR.
@@ -59,9 +55,7 @@ echo        "Desktop development with C++", or run this from a
 echo        "Developer Command Prompt for VS" (x86).
 exit /b 1
 
-rem --------------------------------------------------------------------
 rem  Assemble and link
-rem --------------------------------------------------------------------
 :build
 if not exist "%BUILD%" mkdir "%BUILD%"
 if not exist "%BUILD%\src"   mkdir "%BUILD%\src"

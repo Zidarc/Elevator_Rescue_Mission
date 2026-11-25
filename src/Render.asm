@@ -1,3 +1,7 @@
+; Render.asm - draws everything: the intro, the building, the elevator,
+; the stats panel, the message line and the shop screen.
+; Gotoxy moves the cursor to a row and column and we draw over the old
+; picture, instead of clearing the screen every time, so it does not flicker.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 
@@ -101,6 +105,8 @@ introText       BYTE "       Civilians are trapped on floors 1-9 and every", 0Dh
 introPress      BYTE "             Press any key to start...", 0
 
 .code
+; Prints the string at ESI, then spaces until ECX characters are filled.
+; The spaces wipe out longer old text that was there before.
 PaintPadded PROC USES eax ecx edx
     INVOKE StrLen, esi
     mov  edx, esi
@@ -115,6 +121,7 @@ paddedDone:
     ret
 PaintPadded ENDP
 
+; Prints the number in EAX in a field ECX characters wide.
 PaintNumber PROC USES eax esi
     INVOKE StrFromUInt, eax, ADDR numText
     mov  esi, OFFSET numText
@@ -122,6 +129,7 @@ PaintNumber PROC USES eax esi
     ret
 PaintNumber ENDP
 
+; Prints the string at EDX in colour EAX, then goes back to normal grey.
 PaintText PROC USES eax
     call SetTextColor
     call WriteString
@@ -130,6 +138,7 @@ PaintText PROC USES eax
     ret
 PaintText ENDP
 
+; Moves to row DH of the stats panel and prints the label at ESI.
 HudLabel PROC USES edx
     mov  dl, COL_HUD
     call Gotoxy
@@ -138,18 +147,23 @@ HudLabel PROC USES edx
     ret
 HudLabel ENDP
 
+; Picks the timer colour by comparing time left with the starting time:
+;   left x 2 > start   -> green  (more than half left)
+;   left x 4 >= start  -> yellow (25% to 50% left)
+;   otherwise          -> red    (less than 25% left)
+; SHL 1 = x2 and SHL 2 = x4, so no division is needed. EAX = colour.
 GetTtlColor PROC USES ebx, ttlNow:DWORD, ttlFull:DWORD
     mov  ebx, ttlFull
     test ebx, ebx
     jz   ttlGreen
     mov  eax, ttlNow
-    shl  eax, 1
+    shl  eax, 1                         ; left x 2
     cmp  eax, ebx
-    ja   ttlGreen
+    ja   ttlGreen                       ; more than half left
     mov  eax, ttlNow
-    shl  eax, 2
+    shl  eax, 2                         ; left x 4
     cmp  eax, ebx
-    jae  ttlYellow
+    jae  ttlYellow                      ; 25% to 50% left
     mov  eax, COLOR_TTL_CRIT
     ret
 ttlYellow:
@@ -160,6 +174,8 @@ ttlGreen:
     ret
 GetTtlColor ENDP
 
+; Shows (1) or hides (0) the blinking cursor using the Win32 function
+; SetConsoleCursorInfo. It is hidden while playing.
 SetCursorVisible PROC USES eax ecx edx, visible:DWORD
     mov  eax, visible
     mov  cursorInfo.bVisible, eax
@@ -168,12 +184,14 @@ SetCursorVisible PROC USES eax ecx edx, visible:DWORD
     ret
 SetCursorVisible ENDP
 
+; Clears the screen and hides the cursor before drawing the game.
 ClearGameScreen PROC
     call Clrscr
     INVOKE SetCursorVisible, 0
     ret
 ClearGameScreen ENDP
 
+; The title screen shown once when the program starts. Waits for a key.
 DrawIntro PROC USES eax edx
     call Clrscr
     INVOKE SetCursorVisible, 0
@@ -190,6 +208,8 @@ DrawIntro PROC USES eax edx
     ret
 DrawIntro ENDP
 
+; Draws the parts that never change: the title, the two ---- lines
+; and the keys line.
 DrawFrame PROC USES eax edx
     INVOKE StrFill, ADDR ruleLine, RULE_WIDTH, '-'
     mov  dh, ROW_RULE_TOP
@@ -216,9 +236,13 @@ DrawFrame PROC USES eax edx
     ret
 DrawFrame ENDP
 
+; Draws one floor line: floor number, the elevator [===] if it is here,
+; what is on the floor and its timer.
+;   ?  not scanned yet     N  normal people     !  critical people (magenta)
+;   +  energy pack         x  time ran out
 DrawFloor PROC USES eax ebx ecx edx esi, floorIndex:DWORD
     mov  ebx, floorIndex
-    mov  eax, ROW_TOP_FLOOR + TOP_FLOOR
+    mov  eax, ROW_TOP_FLOOR + TOP_FLOOR ; floor 9 is drawn at the top, floor 0 at the bottom
     sub  eax, ebx
     mov  dh, al
     mov  dl, COL_LEFT
@@ -243,8 +267,8 @@ drawShaft:
 
     cmp  ebx, LOBBY
     je   drawLobby
-    lea  esi, floors[ebx * SIZEOF FloorInfo]
-    mov  bl, (FloorInfo PTR [esi]).floorFlags
+    lea  esi, floors[ebx * SIZEOF FloorInfo] ; ESI = address of this floor
+    mov  bl, (FloorInfo PTR [esi]).floorFlags ; BL = flags of this floor
     test bl, FLAG_EXPIRED
     jnz  drawExpired
     test bl, FLAG_SCANNED
@@ -323,6 +347,9 @@ lineEnd:
     ret
 DrawFloor ENDP
 
+; Draws the round and difficulty at the top, the stats panel on the right
+; (energy, credits, capacity, passengers, scores, rescued, lost)
+; and the message line at the bottom.
 DrawHud PROC USES eax ecx edx esi
     mov  dh, ROW_TITLE
     mov  dl, COL_ROUND
@@ -435,6 +462,7 @@ energyColor:
     ret
 DrawHud ENDP
 
+; Draws the whole game screen: frame, all 10 floors, then the stats panel.
 DrawGameState PROC USES ecx edx
     call DrawFrame
     xor  ecx, ecx
@@ -450,6 +478,8 @@ floorLoop:
     ret
 DrawGameState ENDP
 
+; Shown when a round ends: the final picture plus the round score
+; and total score. Waits for a key.
 ShowRoundOver PROC USES eax ecx edx
     call DrawGameState
     mov  dh, ROW_PROMPT
@@ -469,11 +499,13 @@ ShowRoundOver PROC USES eax ecx edx
     call SetTextColor
     call Crlf
     call Crlf
-    call ReadKeyFlush
+    call ReadKeyFlush                   ; ignore keys pressed during the round
     call WaitMsg
     ret
 ShowRoundOver ENDP
 
+; Draws the shop screen: credits, the 3 items with their prices and the
+; current capacity and energy, and the last message.
 DrawShop PROC USES eax edx
     call Clrscr
     mov  edx, OFFSET shopTitle
@@ -517,6 +549,7 @@ DrawShop PROC USES eax edx
     ret
 DrawShop ENDP
 
+; Saves a message to show on the message line.
 SetStatus PROC USES eax, pMsg:PTR BYTE
     INVOKE StrCopyN, ADDR statusMsg, pMsg, STATUS_SIZE
     ret

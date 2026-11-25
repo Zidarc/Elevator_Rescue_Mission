@@ -1,3 +1,7 @@
+; Scoreboard.asm - the top 10 high scores.
+; Keeps the table sorted (insertion sort), saves it to
+; data\highscores.dat and loads it back when the game starts.
+; File = the count (4 bytes) followed by the whole table.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 
@@ -31,16 +35,27 @@ tblDot       BYTE ".   ", 0
 tblRoundsGap BYTE "        ", 0
 
 .code
+; Empties the table: fills it with zeros (REP STOSB) and sets count to 0.
 ClearScores PROC USES eax ecx edi
     mov  edi, OFFSET highScores
     mov  ecx, TABLE_BYTES
     xor  eax, eax
-    cld
-    rep  stosb
+    cld                                 ; back to normal (forward) direction
+    rep  stosb                          ; clear the slot with zeros
     mov  highScoreCount, 0
     ret
 ClearScores ENDP
 
+; Adds a new score to the table and keeps it sorted, highest first
+; (insertion sort):
+;   1. find the first record with a smaller score - that is the new slot
+;   2. move every record from that slot down by one place. All of them
+;      are moved in one go with REP MOVSB, copying BACKWARDS (STD) from
+;      the last byte, so no record is overwritten before it is moved.
+;      If the table is full the 10th record falls off.
+;   3. write the new name and score in the free slot
+; Equal scores: the new one goes below the old one.
+; EAX = rank 1-10, or 0 if the score is too low for the table.
 InsertScoreSorted PROC USES ebx ecx esi edi,
         pName:PTR BYTE, scoreValue:DWORD, levelValue:DWORD, roundsValue:DWORD
     xor  ebx, ebx
@@ -49,7 +64,7 @@ findSlot:
     cmp  ebx, highScoreCount
     jae  slotFound
     mov  eax, (HighScore PTR [esi]).points
-    cmp  eax, scoreValue
+    cmp  eax, scoreValue                ; old score < new score? then this is the slot
     jb   slotFound
     inc  ebx
     add  esi, SIZEOF HighScore
@@ -61,21 +76,21 @@ slotFound:
     jae  insertDone
 
     mov  ecx, highScoreCount
-    cmp  ecx, MAX_SCORES - 1
+    cmp  ecx, MAX_SCORES - 1            ; at most 9 records can move down (the 10th falls off)
     jbe  countReady
     mov  ecx, MAX_SCORES - 1
 countReady:
-    sub  ecx, ebx
+    sub  ecx, ebx                       ; ECX = how many records must move
     jbe  writeRecord
-    imul ecx, ecx, SIZEOF HighScore
-    lea  esi, [esi + ecx - 1]
-    lea  edi, [esi + SIZEOF HighScore]
-    std
-    rep  movsb
+    imul ecx, ecx, SIZEOF HighScore     ; records -> bytes (24 bytes each)
+    lea  esi, [esi + ecx - 1]           ; ESI = last byte to move
+    lea  edi, [esi + SIZEOF HighScore]  ; EDI = one record further down
+    std                                 ; copy backwards so nothing is overwritten
+    rep  movsb                          ; move all the records down one place
     cld
 
 writeRecord:
-    imul edi, ebx, SIZEOF HighScore
+    imul edi, ebx, SIZEOF HighScore     ; EDI = address of the free slot
     add  edi, OFFSET highScores
     mov  esi, edi
     mov  ecx, SIZEOF HighScore
@@ -94,17 +109,20 @@ writeRecord:
     jae  rankReady
     inc  highScoreCount
 rankReady:
-    lea  eax, [ebx + 1]
+    lea  eax, [ebx + 1]                 ; rank = slot index + 1
 insertDone:
     ret
 InsertScoreSorted ENDP
 
+; Is the score in EAX good enough for the table?
+; Yes if the table is not full yet, or it beats the 10th score.
+; EAX = 1 yes, 0 no.
 ScoreQualifies PROC
     test eax, eax
     jz   notQualified
     cmp  highScoreCount, MAX_SCORES
     jb   qualified
-    cmp  eax, highScores[(MAX_SCORES - 1) * SIZEOF HighScore].points
+    cmp  eax, highScores[(MAX_SCORES - 1) * SIZEOF HighScore].points ; compare with the 10th score
     ja   qualified
 notQualified:
     xor  eax, eax
@@ -114,6 +132,8 @@ qualified:
     ret
 ScoreQualifies ENDP
 
+; Writes the count and the table to a file (CreateOutputFile, WriteToFile).
+; EAX = 1 if saved, 0 if the file could not be written.
 SaveScoresTo PROC USES ebx ecx edx esi, pFile:PTR BYTE
     mov  edx, pFile
     call CreateOutputFile
@@ -143,6 +163,9 @@ saveFailed:
     ret
 SaveScoresTo ENDP
 
+; Reads the count and the table from a file (OpenInputFile, ReadFromFile).
+; If the file is missing or damaged the table simply starts empty.
+; EAX = 1 if loaded, 0 if not.
 LoadScoresFrom PROC USES ebx ecx edx esi, pFile:PTR BYTE
     call ClearScores
     mov  edx, pFile
@@ -170,7 +193,7 @@ LoadScoresFrom PROC USES ebx ecx edx esi, pFile:PTR BYTE
     mov  esi, OFFSET highScores
     mov  ecx, MAX_SCORES
 terminateNames:
-    mov  (HighScore PTR [esi]).playerName[NAME_SIZE - 1], 0
+    mov  (HighScore PTR [esi]).playerName[NAME_SIZE - 1], 0 ; make sure every name ends with 0
     add  esi, SIZEOF HighScore
     loop terminateNames
 
@@ -186,16 +209,19 @@ loadFailed:
     ret
 LoadScoresFrom ENDP
 
+; Saves the table to data\highscores.dat.
 SaveScores PROC
     INVOKE SaveScoresTo, ADDR scoreFile
     ret
 SaveScores ENDP
 
+; Loads the table from data\highscores.dat (called when the game starts).
 LoadScores PROC
     INVOKE LoadScoresFrom, ADDR scoreFile
     ret
 LoadScores ENDP
 
+; Prints the text at ESI padded with spaces to ECX characters (one table column).
 WriteCell PROC USES eax edx
     INVOKE StrCopyN, ADDR cellBuffer, esi, SIZEOF cellBuffer
     INVOKE StrPadRight, ADDR cellBuffer, ecx
@@ -204,6 +230,7 @@ WriteCell PROC USES eax edx
     ret
 WriteCell ENDP
 
+; Prints the high-score table: rank, name, level, rounds and score.
 ShowScores PROC USES eax ebx ecx edx esi
     call Clrscr
     mov  eax, yellow + (black * 16)
@@ -268,6 +295,9 @@ scoresDone:
     ret
 ShowScores ENDP
 
+; After a game: if the total score is good enough for the top 10,
+; asks for the player's name (ReadString), makes it capital letters,
+; puts it in the table, saves the file and shows the table.
 RecordScore PROC USES ebx ecx edx
     mov  edx, OFFSET msgZero
     mov  eax, totalScore

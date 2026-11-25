@@ -1,7 +1,4 @@
-;=====================================================================
-; Menu.asm
-; Main menu and the How to Play screen.
-;=====================================================================
+; Menu.asm - the main menu and the How to Play page.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 
@@ -39,10 +36,9 @@ howToPlay   BYTE "  HOW TO PLAY", 0Dh, 0Ah
             BYTE "  A game has 3 rounds, each with shorter timers.", 0Dh, 0Ah, 0Dh, 0Ah, 0
 
 .code
-;---------------------------------------------------------------------
-; RunMainMenu
-; Shows the menu until the player chooses Quit.
-;---------------------------------------------------------------------
+; Shows the intro screen, then the main menu:
+; 1 New Game, 2 High Scores, 3 How to Play, 4 Quit.
+; Keeps showing the menu until the player picks Quit.
 RunMainMenu PROC USES eax edx
     INVOKE DrawIntro
 menuLoop:
@@ -84,10 +80,7 @@ optQuit:
     ret
 RunMainMenu ENDP
 
-;---------------------------------------------------------------------
-; ShowHowToPlay
-; Prints the rules and waits for Enter.
-;---------------------------------------------------------------------
+; Prints the game rules and controls, waits for a key.
 ShowHowToPlay PROC USES edx
     call Clrscr
     mov  edx, OFFSET howToPlay

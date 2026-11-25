@@ -1,39 +1,25 @@
-;=====================================================================
-; Elevator.inc
-; Shared constants, structures, global variables and procedure
-; prototypes for Elevator Rescue Simulator.
-;
-; Every .asm module includes this file AFTER Irvine32.inc:
-;     INCLUDE Irvine32.inc
-;     INCLUDE Elevator.inc
-;
-; Globals are declared with EXTERNDEF here and DEFINED in
-; src/GameState.asm. EXTERNDEF works in both the defining and the
-; using module, so this one file serves everybody.
-;=====================================================================
+; Elevator.inc - shared by every .asm file (included after Irvine32.inc).
+; Holds all constants, the structures (STRUCT), the list of global
+; variables (EXTERNDEF) and the list of every function (PROTO).
+; IFNDEF makes sure it is only included once.
 IFNDEF ELEVATOR_INC
 ELEVATOR_INC EQU 1
 
-;---------------------------------------------------------------------
 ; Building
-;---------------------------------------------------------------------
 NUM_FLOORS        = 10              ; floor 0 = lobby, floors 1..9
 LOBBY             = 0
 TOP_FLOOR         = NUM_FLOORS - 1
 MAX_ROUNDS        = 3
 
-;---------------------------------------------------------------------
-; Floor flags (bit field, one BYTE per floor)
-;---------------------------------------------------------------------
+; Floor flags: every floor has one BYTE where each bit means something.
+; Checked with TEST, set with OR, cleared with AND NOT.
 FLAG_CIVILIANS    = 00000001b       ; civilians are waiting
 FLAG_CRITICAL     = 00000010b       ; civilians are critical (bonus, short TTL)
 FLAG_ENERGY       = 00000100b       ; energy pack on this floor
 FLAG_EXPIRED      = 00001000b       ; TTL ran out, civilians lost
 FLAG_SCANNED      = 00010000b       ; contents revealed (scanned or visited)
 
-;---------------------------------------------------------------------
 ; Floor types returned by RollFloorType
-;---------------------------------------------------------------------
 FT_EMPTY          = 0
 FT_NORMAL         = 1
 FT_CRITICAL       = 2
@@ -50,9 +36,7 @@ CRITICAL_CIV_MAX  = 2
 ROUND_TTL_STEP    = 5               ; TTL shrinks by 5 s per extra round
 MIN_TTL           = 10
 
-;---------------------------------------------------------------------
 ; Elevator, energy and shop
-;---------------------------------------------------------------------
 MOVE_COST         = 2               ; energy per floor moved
 SCAN_COST         = 5               ; energy per scan
 ENERGY_PACK       = 25              ; energy gained from a pack
@@ -71,9 +55,7 @@ SHOP_ITEM_CAPACITY  = 1
 SHOP_ITEM_ENERGY    = 2
 SHOP_ITEM_FREEZE    = 3
 
-;---------------------------------------------------------------------
 ; Scoring
-;---------------------------------------------------------------------
 NORMAL_POINTS     = 100             ; per normal civilian delivered to lobby
 CRITICAL_POINTS   = 300             ; per critical civilian delivered
 CASUALTY_PENALTY  = 50              ; per civilian lost
@@ -81,9 +63,7 @@ ENERGY_BONUS      = 2               ; per energy point left at round end
 NORMAL_CREDITS    = 10
 CRITICAL_CREDITS  = 25
 
-;---------------------------------------------------------------------
 ; Timing and difficulty
-;---------------------------------------------------------------------
 TICK_MS           = 1000            ; one TTL tick per second
 FRAME_DELAY_MS    = 30              ; input polling delay in the game loop
 
@@ -94,17 +74,12 @@ NUM_DIFFICULTIES  = 3
 DIFF_NAME_SIZE    = 8
 NUM_BUF_SIZE      = 12
 
-;---------------------------------------------------------------------
 ; Scoreboard
-;---------------------------------------------------------------------
 NAME_SIZE         = 16              ; 15 characters + null terminator
 MAX_SCORES        = 10
 STATUS_SIZE       = 64
 
-;---------------------------------------------------------------------
-; Structures
-; Field names are unique across all structures on purpose.
-;---------------------------------------------------------------------
+; Structures (like a struct in C). Field names are all different on purpose.
 FloorInfo STRUCT
     civilians   BYTE 0              ; people waiting on this floor
     floorFlags  BYTE 0              ; FLAG_* bits
@@ -129,9 +104,8 @@ HighScore STRUCT
     scorePad    WORD 0              ; keeps the structure 24 bytes
 HighScore ENDS
 
-;---------------------------------------------------------------------
-; Global game state (defined in src/GameState.asm)
-;---------------------------------------------------------------------
+; Global variables. They are created in GameState.asm; EXTERNDEF lets
+; every other file use them.
 EXTERNDEF floors:FloorInfo
 EXTERNDEF difficultyTable:DiffSetting
 EXTERNDEF highScores:HighScore
@@ -157,18 +131,15 @@ EXTERNDEF quitRequested:BYTE        ; 1 when the player pressed Q
 EXTERNDEF highScoreCount:DWORD
 EXTERNDEF statusMsg:BYTE            ; message line shown under the HUD
 
-;---------------------------------------------------------------------
-; Procedure prototypes
-; The day in brackets is when the procedure is implemented
-; (see README, section 15). Do not CALL a procedure before its day.
-;---------------------------------------------------------------------
+; Every function of the game (PROTO), grouped by the file it is in.
+; PROTO lets INVOKE check the parameters.
 
-; --- GameState.asm [Day 1] ---
+; GameState.asm
 ResetGameState      PROTO                           ; new game: score, credits, round 1, energy from difficulty
 GetDiffSetting      PROTO                           ; returns ESI = OFFSET of current DiffSetting
 GetDiffName         PROTO, level:DWORD
 
-; --- StrUtil.asm [Day 1] ---  (string primitives)
+; StrUtil.asm  (string primitives)
 StrLen              PROTO, pStr:PTR BYTE            ; EAX = length
 StrCopyN            PROTO, pDest:PTR BYTE, pSrc:PTR BYTE, maxLen:DWORD  ; EAX = chars copied
 StrEqual            PROTO, pStr1:PTR BYTE, pStr2:PTR BYTE              ; EAX = 1 / 0
@@ -177,22 +148,22 @@ StrToUpper          PROTO, pStr:PTR BYTE            ; in place, a-z only
 StrPadRight         PROTO, pStr:PTR BYTE, fieldWidth:DWORD  ; pad with spaces to fieldWidth
 StrFromUInt         PROTO, value:DWORD, pDest:PTR BYTE
 
-; --- Menu.asm [Day 1, wired up on later days] ---
+; Menu.asm
 RunMainMenu         PROTO
 ShowHowToPlay       PROTO
 
-; --- Building.asm [Day 2] ---
+; Building.asm
 SelectDifficulty    PROTO                           ; asks the player, sets difficulty
 RollFloorType       PROTO                           ; EAX = FT_*
 GenerateFloor       PROTO, floorIndex:DWORD
 InitializeGame      PROTO                           ; builds a new building for roundNum
 
-; --- Elevator.asm [Day 3] ---
+; Elevator.asm
 MoveElevator        PROTO, direction:SDWORD         ; +1 up, -1 down
 PerformAction       PROTO                           ; pick up / drop off / collect energy
 TickFloors          PROTO                           ; one second passes on every floor
 
-; --- Scan.asm and GameLoop.asm [Day 4] ---
+; Scan.asm and GameLoop.asm
 ScanAction          PROTO
 ScanFloorsRecursive PROTO                           ; stack params, see Scan.asm
 RunGame             PROTO                           ; difficulty -> rounds -> summary
@@ -201,7 +172,7 @@ HandleCommand       PROTO, key:DWORD
 CheckRoundOver      PROTO                           ; sets roundOver
 AnyCiviliansWaiting PROTO
 
-; --- Render.asm [Day 5] ---
+; Render.asm
 DrawIntro           PROTO
 DrawGameState       PROTO
 DrawFloor           PROTO, floorIndex:DWORD
@@ -213,13 +184,13 @@ SetCursorVisible    PROTO, visible:DWORD
 GetTtlColor         PROTO, ttlNow:DWORD, ttlFull:DWORD
 SetStatus           PROTO, pMsg:PTR BYTE
 
-; --- Shop.asm and Score.asm [Day 6] ---
+; Shop.asm and Score.asm
 BuyInLobby          PROTO
 BuyItem             PROTO, item:DWORD
 CalcRoundScore      PROTO                           ; EAX = score for this round
 ShowSummary         PROTO
 
-; --- Scoreboard.asm [Day 7] ---
+; Scoreboard.asm
 LoadScores          PROTO
 SaveScores          PROTO
 LoadScoresFrom      PROTO, pFile:PTR BYTE

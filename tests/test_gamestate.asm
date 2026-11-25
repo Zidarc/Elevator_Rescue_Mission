@@ -1,6 +1,4 @@
-;=====================================================================
-; test_gamestate.asm  -  tests for src/GameState.asm
-;=====================================================================
+; test_gamestate.asm - tests for GameState.asm.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 INCLUDE TestFramework.inc
@@ -11,17 +9,18 @@ gsHard      BYTE "HARD", 0
 gsUnknown   BYTE "?", 0
 
 .code
+; Structure sizes, the difficulty table, ResetGameState and GetDiffName.
 TestGameState PROC
     mSuite "GameState"
 
-    ; --- structure sizes the rest of the code relies on ---
+    ; structure sizes the rest of the code relies on
     mAssertEq SIZEOF FloorInfo, 8, "FloorInfo is 8 bytes"
     mAssertEq SIZEOF HighScore, 24, "HighScore is 24 bytes"
     mAssertEq SIZEOF DiffSetting, 20, "DiffSetting is 20 bytes"
     ; NOTE: LENGTHOF / SIZEOF of an EXTERNDEF array is only one element
     ; outside GameState.asm, so loops must use NUM_FLOORS / MAX_SCORES.
 
-    ; --- base + index * scale addressing reaches the last floor ---
+    ; base + index * scale addressing reaches the last floor
     mov  floors[TOP_FLOOR * SIZEOF FloorInfo].civilians, 7
     mov  esi, OFFSET floors
     mov  ecx, TOP_FLOOR
@@ -29,7 +28,7 @@ TestGameState PROC
     mAssertEq eax, 7, "indexed addressing reaches floors[TOP_FLOOR]"
     mov  floors[TOP_FLOOR * SIZEOF FloorInfo].civilians, 0
 
-    ; --- GetDiffSetting indexes the table correctly ---
+    ; GetDiffSetting indexes the table correctly
     mov  difficulty, DIFF_EASY
     call GetDiffSetting
     mAssertEq esi, OFFSET difficultyTable, "Easy setting is the first entry"
@@ -38,7 +37,7 @@ TestGameState PROC
     mov  eax, (DiffSetting PTR [esi]).multiplier
     mAssertEq eax, 3, "Hard multiplier is 3"
 
-    ; --- ResetGameState ---
+    ; ResetGameState
     mov  difficulty, DIFF_NORMAL
     mov  credits, 999                   ; dirty some state first
     mov  totalScore, 1234

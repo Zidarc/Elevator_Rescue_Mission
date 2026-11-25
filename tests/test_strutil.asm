@@ -1,6 +1,4 @@
-;=====================================================================
-; test_strutil.asm  -  tests for src/StrUtil.asm
-;=====================================================================
+; test_strutil.asm - tests for the string functions in StrUtil.asm.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 INCLUDE TestFramework.inc
@@ -19,16 +17,17 @@ sMaxDword   BYTE "4294967295", 0
 buffer      BYTE 32 DUP(?)
 
 .code
+; StrLen, StrEqual, StrCopyN, StrToUpper, StrPadRight, StrFill and StrFromUInt.
 TestStrUtil PROC
     mSuite "StrUtil"
 
-    ; --- StrLen ---
+    ; StrLen
     INVOKE StrLen, ADDR sHello
     mAssertEq eax, 5, "StrLen of HELLO is 5"
     INVOKE StrLen, ADDR sEmpty
     mAssertEq eax, 0, "StrLen of an empty string is 0"
 
-    ; --- StrEqual ---
+    ; StrEqual
     INVOKE StrEqual, ADDR sHello, ADDR sHello2
     mAssertEq eax, 1, "StrEqual: identical strings"
     INVOKE StrEqual, ADDR sHello, ADDR sHelp
@@ -38,7 +37,7 @@ TestStrUtil PROC
     INVOKE StrEqual, ADDR sEmpty, ADDR sEmpty2
     mAssertEq eax, 1, "StrEqual: two empty strings"
 
-    ; --- StrCopyN ---
+    ; StrCopyN
     INVOKE StrCopyN, ADDR buffer, ADDR sHello, SIZEOF buffer
     mAssertEq eax, 5, "StrCopyN copies the whole string"
     INVOKE StrEqual, ADDR buffer, ADDR sHello
@@ -50,13 +49,13 @@ TestStrUtil PROC
     INVOKE StrCopyN, ADDR buffer, ADDR sHello, 0
     mAssertEq eax, 0, "StrCopyN with maxLen 0 copies nothing"
 
-    ; --- StrToUpper ---
+    ; StrToUpper
     INVOKE StrCopyN, ADDR buffer, ADDR sMixed, SIZEOF buffer
     INVOKE StrToUpper, ADDR buffer
     INVOKE StrEqual, ADDR buffer, ADDR sMixedUp
     mAssertEq eax, 1, "StrToUpper changes only a-z"
 
-    ; --- StrPadRight ---
+    ; StrPadRight
     INVOKE StrCopyN, ADDR buffer, ADDR sHelp, SIZEOF buffer
     INVOKE StrPadRight, ADDR buffer, 8
     INVOKE StrLen, ADDR buffer
@@ -67,7 +66,7 @@ TestStrUtil PROC
     INVOKE StrLen, ADDR buffer
     mAssertEq eax, 8, "StrPadRight never shortens a string"
 
-    ; --- StrFill ---
+    ; StrFill
     INVOKE StrFill, ADDR buffer, 3, '*'
     INVOKE StrLen, ADDR buffer
     mAssertEq eax, 3, "StrFill writes count characters"

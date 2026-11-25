@@ -1,19 +1,12 @@
-;=====================================================================
-; StrUtil.asm
-; String helpers built on the x86 string primitives
-; (SCASB, CMPSB, LODSB, STOSB with REP / REPE / REPNE).
-; All strings are null-terminated BYTE arrays.
-;=====================================================================
+; StrUtil.asm - our own string functions, built with the x86 string
+; instructions (SCASB, CMPSB, LODSB, STOSB, REP / REPE / REPNE).
+; Every string ends with a 0 byte.
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 
 .code
-;---------------------------------------------------------------------
-; StrLen
-; Length of a null-terminated string, using REPNE SCASB.
-; Receives: pStr
-; Returns:  EAX = number of characters before the null
-;---------------------------------------------------------------------
+; Counts the characters in a string and returns the count in EAX.
+; REPNE SCASB searches for the 0 byte; ECX tells how far it went.
 StrLen PROC USES ecx edi, pStr:PTR BYTE
     mov  edi, pStr
     xor  eax, eax                       ; AL = 0, the byte we look for
@@ -26,13 +19,9 @@ StrLen PROC USES ecx edi, pStr:PTR BYTE
     ret
 StrLen ENDP
 
-;---------------------------------------------------------------------
-; StrCopyN
-; Copies at most maxLen - 1 characters from pSrc to pDest and always
-; writes a null terminator (unless maxLen is 0). Uses LODSB / STOSB.
-; Receives: pDest, pSrc, maxLen = size of the destination buffer
-; Returns:  EAX = number of characters copied
-;---------------------------------------------------------------------
+; Copies a string into a buffer of maxLen bytes without overflowing it.
+; Copies at most maxLen - 1 characters and always adds the 0 at the end.
+; Uses LODSB (read a char) and STOSB (write a char). EAX = chars copied.
 StrCopyN PROC USES ecx esi edi, pDest:PTR BYTE, pSrc:PTR BYTE, maxLen:DWORD
     mov  edi, pDest
     mov  esi, pSrc
@@ -55,12 +44,8 @@ done:
     ret
 StrCopyN ENDP
 
-;---------------------------------------------------------------------
-; StrEqual
-; Compares two strings with REPE CMPSB.
-; Receives: pStr1, pStr2
-; Returns:  EAX = 1 if equal, 0 otherwise
-;---------------------------------------------------------------------
+; Checks if two strings are the same. EAX = 1 same, 0 different.
+; First compares lengths, then REPE CMPSB compares byte by byte.
 StrEqual PROC USES ecx esi edi, pStr1:PTR BYTE, pStr2:PTR BYTE
     INVOKE StrLen, pStr1
     mov  ecx, eax
@@ -81,12 +66,8 @@ notEqual:
     ret
 StrEqual ENDP
 
-;---------------------------------------------------------------------
-; StrFill
-; Writes count copies of fillChar followed by a null, using REP STOSB.
-; Receives: pDest, count, fillChar (low byte used)
-; Returns:  nothing
-;---------------------------------------------------------------------
+; Fills a buffer with "count" copies of one character, then a 0.
+; REP STOSB writes AL into memory ECX times. Used to draw the ---- lines.
 StrFill PROC USES eax ecx edi, pDest:PTR BYTE, count:DWORD, fillChar:DWORD
     mov  edi, pDest
     mov  ecx, count
@@ -97,13 +78,9 @@ StrFill PROC USES eax ecx edi, pDest:PTR BYTE, count:DWORD, fillChar:DWORD
     ret
 StrFill ENDP
 
-;---------------------------------------------------------------------
-; StrToUpper
-; Converts a-z to A-Z in place by clearing bit 5 (AND 11011111b).
-; Other characters are left alone.
-; Receives: pStr
-; Returns:  nothing
-;---------------------------------------------------------------------
+; Changes a-z to A-Z inside the string.
+; In ASCII, lower and upper case differ only in bit 5,
+; so AND with 11011111b clears that bit and makes the letter capital.
 StrToUpper PROC USES eax esi, pStr:PTR BYTE
     mov  esi, pStr
 nextChar:
@@ -123,14 +100,8 @@ finished:
     ret
 StrToUpper ENDP
 
-;---------------------------------------------------------------------
-; StrPadRight
-; Appends spaces until the string is fieldWidth characters long.
-; Does nothing if the string is already that long or longer.
-; The buffer must hold at least fieldWidth + 1 bytes.
-; Receives: pStr, fieldWidth
-; Returns:  nothing
-;---------------------------------------------------------------------
+; Adds spaces at the end of a string until it is fieldWidth long.
+; Used to line up the names in the high-score table.
 StrPadRight PROC USES eax ecx edi, pStr:PTR BYTE, fieldWidth:DWORD
     INVOKE StrLen, pStr
     mov  ecx, fieldWidth
@@ -147,6 +118,10 @@ finished:
     ret
 StrPadRight ENDP
 
+; Turns a number into text (for example 125 -> "125").
+; Keeps dividing by 10 (DIV); each remainder is one digit. The digits come
+; out backwards, so they are PUSHed and then POPped in the right order.
+; EAX = number of digits.
 StrFromUInt PROC USES ebx ecx edx edi, value:DWORD, pDest:PTR BYTE
     mov  eax, value
     mov  edi, pDest
