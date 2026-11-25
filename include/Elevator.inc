@@ -222,6 +222,9 @@ ShowSummary         PROTO
 ; --- Scoreboard.asm [Day 7] ---
 LoadScores          PROTO
 SaveScores          PROTO
+LoadScoresFrom      PROTO, pFile:PTR BYTE
+SaveScoresTo        PROTO, pFile:PTR BYTE
+ClearScores         PROTO
 InsertScoreSorted   PROTO, pName:PTR BYTE, scoreValue:DWORD, levelValue:DWORD, roundsValue:DWORD ; EAX = rank (1-based) or 0
 RecordScore         PROTO                           ; asks for a name if the score qualifies
 ShowScores          PROTO
