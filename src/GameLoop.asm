@@ -177,16 +177,6 @@ commandDone:
     ret
 HandleCommand ENDP
 
-;---------------------------------------------------------------------
-; RunRound
-; The real-time loop for one round. Never blocks:
-;   - ReadKey polls the keyboard (ZF = 1 when no key is waiting)
-;   - GetMseconds is compared with lastTickMs; every TICK_MS one
-;     second is taken off every waiting floor (TickFloors)
-;   - the screen is redrawn only after a key or a tick
-; Receives: a building prepared by InitializeGame
-; Returns:  when CheckRoundOver reports the round has ended
-;---------------------------------------------------------------------
 PlayEventSounds PROC USES eax ecx edx
     mov  eax, rescuedNormal
     add  eax, rescuedCritical
@@ -204,6 +194,16 @@ soundsDone:
     ret
 PlayEventSounds ENDP
 
+;---------------------------------------------------------------------
+; RunRound
+; The real-time loop for one round. Never blocks:
+;   - ReadKey polls the keyboard (ZF = 1 when no key is waiting)
+;   - GetMseconds is compared with lastTickMs; every TICK_MS one
+;     second is taken off every waiting floor (TickFloors)
+;   - the screen is redrawn only after a key or a tick
+; Receives: a building prepared by InitializeGame
+; Returns:  when CheckRoundOver reports the round has ended
+;---------------------------------------------------------------------
 RunRound PROC USES eax ebx edx
     mov  heardRescued, 0
     mov  heardLost, 0
