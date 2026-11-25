@@ -45,6 +45,8 @@ totalScore          DWORD 0
 rescuedNormal       DWORD 0
 rescuedCritical     DWORD 0
 casualties          DWORD 0
+totalRescued        DWORD 0
+totalLost           DWORD 0
 lastTickMs          DWORD 0
 roundOver           BYTE 0
 quitRequested       BYTE 0
@@ -100,6 +102,8 @@ ResetGameState PROC USES eax esi
     mov  rescuedNormal, eax
     mov  rescuedCritical, eax
     mov  casualties, eax
+    mov  totalRescued, eax
+    mov  totalLost, eax
     mov  passengersNormal, eax
     mov  passengersCritical, eax
     mov  elevatorFloor, LOBBY

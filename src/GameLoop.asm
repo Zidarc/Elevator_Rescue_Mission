@@ -19,13 +19,12 @@ KEY_QUIT   = 'Q'
 CASE_MASK  = 11011111b                  ; clears bit 5: lower -> upper case
 
 .data
-msgShopClosed   BYTE "The shop is not open yet.", 0
 msgOutOfEnergy  BYTE "Out of energy. The round is over.", 0
 msgAllCleared   BYTE "Building cleared. The round is over.", 0
 
 .code
 ;---------------------------------------------------------------------
-; AnyCiviliansWaiting  (private helper)
+; AnyCiviliansWaiting
 ; Walks floors 1..TOP_FLOOR looking for waiting civilians.
 ; Receives: nothing
 ; Returns:  EAX = 1 if any floor still has FLAG_CIVILIANS and at
@@ -154,7 +153,12 @@ cmdScan:
     call ScanAction
     jmp  commandDone
 cmdShop:
-    INVOKE StrCopyN, ADDR statusMsg, ADDR msgShopClosed, STATUS_SIZE
+    call BuyInLobby
+    test eax, eax
+    jz   commandDone
+    call ClearGameScreen
+    call GetMseconds
+    mov  lastTickMs, eax
     jmp  commandDone
 cmdQuit:
     mov  quitRequested, 1
@@ -177,6 +181,7 @@ RunRound PROC USES eax ebx edx
     call ClearGameScreen
     call GetMseconds
     mov  lastTickMs, eax
+    call CalcRoundScore
     call DrawGameState
 
 frameLoop:
@@ -212,6 +217,7 @@ checkEnd:
     jnz  roundFinished
     test ebx, ebx
     jz   frameLoop
+    call CalcRoundScore
     call DrawGameState
     jmp  frameLoop
 
@@ -233,6 +239,13 @@ RunGame PROC USES eax
 roundLoop:
     call InitializeGame
     call RunRound
+    call CalcRoundScore
+    add  totalScore, eax
+    mov  eax, rescuedNormal
+    add  eax, rescuedCritical
+    add  totalRescued, eax
+    mov  eax, casualties
+    add  totalLost, eax
     call ShowRoundOver
     cmp  quitRequested, 0
     jne  gameOver
@@ -244,6 +257,8 @@ roundLoop:
 
 gameOver:
     INVOKE SetCursorVisible, 1
+    call ShowSummary
+    call WaitMsg
     ret
 RunGame ENDP
 

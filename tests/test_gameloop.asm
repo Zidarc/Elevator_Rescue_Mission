@@ -173,8 +173,11 @@ TestHandleCommand PROC USES eax
     mAssertEq eax, 1, "q sets quitRequested"
 
     call ResetLoopTestState
+    mov  elevatorFloor, WAITING_FLOOR
+    mov  credits, 100
     INVOKE HandleCommand, 'B'
     mAssertEq eax, 1, "B is a command"
+    mAssertEq credits, 100, "B away from the lobby spends nothing"
 
     call ResetLoopTestState
     INVOKE HandleCommand, 'Z'
