@@ -152,8 +152,8 @@ Everything stays in MASM with Irvine32, as the proposal describes.
 | **Procedures**: `PROC`, `USES`, `PROTO`, `INVOKE`, `ADDR` | Every module |
 | **Explicit stack frames**: `EBP`-based parameters, `RET n` | `ScanFloorsRecursive` |
 | **Recursion** | `ScanFloorsRecursive` walks up and down the building |
-| **String primitives**: `MOVSB`, `CMPSB`, `SCASB`, `STOSB`, `LODSB` with `REP` / `REPE` / `REPNE` | `StrUtil.asm`, moving whole high-score records |
-| **Macros** with `LOCAL` labels | Test framework (`mAssertEq`, `mSuite`), drawing helpers |
+| **String primitives**: `MOVSB`, `CMPSB`, `SCASB`, `STOSB`, `LODSB` with `REP` / `REPE` / `REPNE` | `StrUtil.asm`; `Scoreboard.asm` (`STD` + `REP MOVSB` shifts whole records, `REP STOSB` clears them) |
+| **Macros** with `LOCAL` labels | Test framework (`mAssertEq`, `mSuite`) |
 | **Conditional assembly**: `IFNDEF` | Include guards |
 | **Multi-module programs**: `EXTERNDEF`, `PROTO`, separate assembly and linking | `src/*.asm` + `include/Elevator.inc` |
 | **Irvine32**: `ReadKey`, `ReadChar`, `ReadString`, `Gotoxy`, `SetTextColor`, `Clrscr`, `Delay`, `GetMseconds`, `Randomize`, `RandomRange`, `WriteDec` | Input, rendering, timing, randomness |
@@ -183,7 +183,7 @@ How each topic from the course textbook (Kip Irvine, *Assembly Language for x86 
 
 ### Stretch goal: Sound
 
-If time allows after Day 8, short beeps (Win32 `Beep` from kernel32) on rescue, expiry and round end. Started only once the core game is complete and stable.
+Done: short beeps (Win32 `Beep` from kernel32) on rescue, expiry and round end, in `GameLoop.asm`.
 
 ---
 
@@ -314,7 +314,7 @@ Select difficulty ──► ResetGameState
 
 ### Energy
 - Start energy depends on the difficulty. Rounds 2 and 3 add +40 (max 150).
-- When energy reaches 0 the elevator stops and the round ends. If it stopped at the lobby, passengers on board are delivered. Anywhere else they are lost.
+- When energy drops below the cost of one move (2), the elevator can no longer move and the round ends. If it stopped at the lobby, passengers on board are delivered. Anywhere else they are lost. (Checking "below 2" rather than "equal to 0" stops the round from getting stuck at 1 energy.)
 
 ### Shop (lobby, `B`)
 
@@ -326,11 +326,15 @@ Select difficulty ──► ResetGameState
 
 Credits: **10** per normal civilian and **25** per critical civilian delivered to the lobby. Credits, capacity and energy carry over between rounds.
 
+- Keys `1`, `2`, `3` buy; `B` (or `Esc`) leaves the shop.
+- **Timers are paused while the shop is open.**
+- A purchase is refused, and costs nothing, when credits are short, the item is already at its maximum, or (time freeze) nobody is waiting.
+
 ### Round end
 A round ends when **any** of these happens:
 1. No civilians are waiting on any floor and none are in the elevator (all rescued or lost).
-2. Energy reaches 0.
-3. The player presses `Q` (this also ends the game).
+2. Energy drops below the cost of one move.
+3. The player presses `Q` (this also ends the game; that round's score still counts).
 
 ### Scoring
 
@@ -343,6 +347,8 @@ roundScore = ( rescuedNormal   × 100
 roundScore never goes below 0.     totalScore = sum of all round scores
 ```
 
+The HUD shows this formula live during the round. It is always recalculated from the counters, never added to, so delivered civilians are counted exactly once.
+
 Example: Normal (×2), 8 normal and 2 critical civilians rescued, 3 lost, 40 energy left:
 
 ```
@@ -353,32 +359,33 @@ Example: Normal (×2), 8 normal and 2 critical civilians rescued, 3 lost, 40 ene
 - After the game, if `totalScore > 0` and it beats the 10th entry (or the table isn't full), the player enters a name (max 15 characters, stored in upper case).
 - The entry is placed by **insertion sort**: records below it are shifted down one slot (whole 24-byte records moved with `REP MOVSB`), and the table is saved to `data/highscores.dat`.
 - Equal scores keep their original order (the new entry goes below existing equal scores).
+- File layout: the 4-byte entry count, then all 10 records (244 bytes). A missing or short file, or a count above 10, loads as an empty table.
 
 ---
 
 ## 11. Screen Layout
 
-80 × 25 console. Only the parts that change are redrawn, to avoid flicker.
+80 × 25 console. The screen is cleared only when a round starts and after the shop. During play every line is rewritten in place at a fixed width, so it does not flicker.
 
 ```
  ELEVATOR RESCUE SIMULATOR          Round 2/3       Difficulty: NORMAL
- ───────────────────────────────────────────────────────────────────────
-  9 │       │  ?  ?        TTL 41     │   Energy      78 / 150
-  8 │       │  N  3        TTL 12     │   Credits     45
-  7 │       │  +           ---        │   Capacity    2 / 4
-  6 │ [===] │  !  1        TTL 08     │   Passengers  N:2  !:0
-  5 │       │  x           ---        │
-  4 │       │  ?  ?        TTL 37     │   Round score 1240
-  3 │       │              ---        │   Total score 2900
-  2 │       │  N  2        TTL 22     │
-  1 │       │  ?  ?        TTL 30     │   Rescued 6   Lost 3
-  0 │ LOBBY │  [B] SHOP               │
- ───────────────────────────────────────────────────────────────────────
-  W up   S down   A action   X scan   B shop   Q quit
-  > Picked up 2 civilians on floor 6.
+ ------------------------------------------------------------------------
+ 9 |       | ?  ?    TTL 41    |  Energy      78/150
+ 8 |       | N  3    TTL 12    |  Credits     45
+ 7 |       | +       ---       |  Capacity    2/4
+ 6 | [===] | !  1    TTL 8     |  Passengers  N:2  !:0
+ 5 |       | x       ---       |
+ 4 |       | ?  ?    TTL 37    |  Round score 1240
+ 3 |       |         ---       |  Total score 2900
+ 2 |       | N  2    TTL 22    |
+ 1 |       | ?  ?    TTL 30    |  Rescued 6  Lost 3
+ 0 |       | LOBBY   [B] SHOP  |
+ ------------------------------------------------------------------------
+ W up   S down   A action   X scan   B shop   Q quit
+ > Picked up civilians.
 ```
 
-TTL colours: **green** > 50 % left, **yellow** 25–50 %, **red** < 25 %. Critical floors are magenta.
+TTL colours: **green** > 50 % left, **yellow** 25–50 %, **red** < 25 %. Critical floors (`!`) are magenta, energy packs (`+`) cyan, expired floors (`x`) red, the car yellow. Energy turns red below 20. "Rescued / Lost" count the current round. Plain ASCII lines (`|`, `-`) look the same on every console code page. The cursor is hidden during play.
 
 ---
 
@@ -413,6 +420,8 @@ COALProject/
 │   ├── test_building.asm       # Day 2
 │   ├── test_elevator.asm       # Day 3
 │   ├── test_scan.asm           # Day 4
+│   ├── test_gameloop.asm       # Day 4 (round end, key dispatcher)
+│   ├── test_render.asm         # Day 5 (TTL colour thresholds)
 │   ├── test_score.asm          # Day 6 (with the shop)
 │   └── test_scoreboard.asm     # Day 7
 │
@@ -475,7 +484,9 @@ Expected test output:
 == StrUtil
   [PASS] StrLen of HELLO is 5
   ...
-Passed: 33   Failed: 0
+== Scoreboard
+  ...
+Passed: 274   Failed: 0
 
 ALL TESTS PASSED
 ```
@@ -516,12 +527,12 @@ Rotation order: **Ali Hussain → Ali → M. Abbas**, repeating.
 | Day | Date | Owner | Task | Branch |
 |-----|------|-------|------|--------|
 | 1 ✅ | Wed 18 Nov | Ali Hussain | Docs, `.gitignore`, folder structure, `build.bat`, `Elevator.inc` (constants, STRUCTs, `EXTERNDEF`, every `PROTO`), `GameState.asm`, `StrUtil.asm`, `Menu.asm` (menu + How to Play), test framework + tests, create `develop` | `feature/project-setup` |
-| 2 | Thu 19 Nov | Ali | `Building.asm`: `SelectDifficulty`, `RollFloorType`, `GenerateFloor`, `InitializeGame` (TTL by difficulty and round, critical TTL `SHR 1`, round energy refill) + `test_building.asm`. *Kept light: DSA is due the same day.* | `feature/building` |
-| 3 | Fri 20 Nov | M. Abbas | `Elevator.asm`: `MoveElevator` (bounds, energy), `PerformAction` (pick up up to capacity, collect energy, drop off at lobby with points and credits), `TickFloors` (TTL countdown, expiry → casualties) + `test_elevator.asm` | `feature/elevator` |
-| 4 | Sat 21 Nov | Ali Hussain | `Scan.asm`: `ScanAction`, `ScanFloorsRecursive` (manual `EBP` frame). `GameLoop.asm`: `RunGame`, `RunRound` (`ReadKey` + `GetMseconds`), `HandleCommand`, `CheckRoundOver`, rounds 1–3. Wire **New Game** in the menu. Temporary plain-text `DrawGameState` in `Render.asm` so the game is playable + `test_scan.asm` | `feature/game-loop` |
-| 5 | Sun 22 Nov | Ali | `Render.asm` (replaces the temporary one): `DrawIntro`, `DrawGameState`, `DrawFloor`, `DrawHud`, `SetStatus`. `Gotoxy` layout from Section 11, TTL colours, elevator car, hidden cursor, redraw only what changed | `feature/render` |
-| 6 | Mon 23 Nov | M. Abbas | `Shop.asm`: `BuyInLobby` (3 items, credit checks). `Score.asm`: `CalcRoundScore` (`MUL`, multiplier, never below 0), `ShowSummary`. Wire both into the game loop + `test_score.asm` | `feature/shop-score` |
-| 7 | Tue 24 Nov | Ali Hussain | `Scoreboard.asm`: `InsertScoreSorted` (insertion sort, records shifted with `REP MOVSB`), `RecordScore` (name entry, `StrToUpper`), `ShowScores` (`StrPadRight` table), `LoadScores` / `SaveScores` (`data/highscores.dat`). Wire **High Scores** in the menu + `test_scoreboard.asm` | `feature/scoreboard` |
+| 2 ✅ | Thu 19 Nov | Ali | `Building.asm`: `SelectDifficulty`, `RollFloorType`, `GenerateFloor`, `InitializeGame` (TTL by difficulty and round, critical TTL `SHR 1`, round energy refill) + `test_building.asm`. *Kept light: DSA is due the same day.* | `feature/building` |
+| 3 ✅ | Fri 20 Nov | M. Abbas | `Elevator.asm`: `MoveElevator` (bounds, energy), `PerformAction` (pick up up to capacity, collect energy, drop off at lobby with points and credits), `TickFloors` (TTL countdown, expiry → casualties) + `test_elevator.asm` | `feature/elevator` |
+| 4 ✅ | Sat 21 Nov | Ali Hussain | `Scan.asm`: `ScanAction`, `ScanFloorsRecursive` (manual `EBP` frame). `GameLoop.asm`: `RunGame`, `RunRound` (`ReadKey` + `GetMseconds`), `HandleCommand`, `CheckRoundOver`, rounds 1–3. Wire **New Game** in the menu. Temporary plain-text `DrawGameState` in `Render.asm` so the game is playable + `test_scan.asm` | `feature/game-loop` |
+| 5 ✅ | Sun 22 Nov | Ali | `Render.asm` (replaces the temporary one): `DrawIntro`, `DrawGameState`, `DrawFloor`, `DrawHud`, `SetStatus`. `Gotoxy` layout from Section 11, TTL colours, elevator car, hidden cursor, redraw only what changed | `feature/render` |
+| 6 ✅ | Mon 23 Nov | M. Abbas | `Shop.asm`: `BuyInLobby` (3 items, credit checks). `Score.asm`: `CalcRoundScore` (`MUL`, multiplier, never below 0), `ShowSummary`. Wire both into the game loop + `test_score.asm` | `feature/shop-score` |
+| 7 ✅ | Tue 24 Nov | Ali Hussain | `Scoreboard.asm`: `InsertScoreSorted` (insertion sort, records shifted with `REP MOVSB`), `RecordScore` (name entry, `StrToUpper`), `ShowScores` (`StrPadRight` table), `LoadScores` / `SaveScores` (`data/highscores.dat`). Wire **High Scores** in the menu + `test_scoreboard.asm` | `feature/scoreboard` |
 | 8 | Wed 25 Nov | Ali | Full test pass, play-testing on all 3 difficulties, bug fixes, balance the constants in `Elevator.inc`. `docs/DESIGN.md` (every procedure: receives / returns / registers changed). Draft `docs/REPORT.md`. *Stretch: sound* | `fix/*` / `docs/design` |
 | 9 | Thu 26 Nov | M. Abbas | UI polish, finish `docs/REPORT.md`, `docs/DEMO.md` + rehearsal with the whole team, final regression test, merge `develop` → `main`, tag `v1.0`, **submit** | `main` |
 
@@ -602,7 +613,11 @@ To make logic testable, tests set the globals directly (for example `mov elevato
 - An 11th score lower than all 10 is rejected (rank 0)
 - Equal scores: the new one goes below
 - Long names are cut to 15 characters
-- Save, clear, load gives the same table; a missing file gives an empty table
+- Save, clear, load gives the same table; a missing file gives an empty table; a damaged file gives an empty table
+- Tests write to `build\test_scores.dat`, never to `data\highscores.dat`
+
+**Render (Day 5)**
+- TTL colour thresholds: > 50 % green, 25–50 % yellow, < 25 % red; above 100 % after a time freeze stays green
 
 ---
 
