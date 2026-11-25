@@ -146,6 +146,8 @@ EXTERNDEF totalScore:DWORD
 EXTERNDEF rescuedNormal:DWORD       ; delivered this round
 EXTERNDEF rescuedCritical:DWORD
 EXTERNDEF casualties:DWORD          ; lost this round
+EXTERNDEF totalRescued:DWORD
+EXTERNDEF totalLost:DWORD
 EXTERNDEF lastTickMs:DWORD          ; GetMseconds value of the last TTL tick
 EXTERNDEF roundOver:BYTE            ; 1 when the current round has ended
 EXTERNDEF quitRequested:BYTE        ; 1 when the player pressed Q
@@ -209,6 +211,7 @@ SetStatus           PROTO, pMsg:PTR BYTE
 
 ; --- Shop.asm and Score.asm [Day 6] ---
 BuyInLobby          PROTO
+BuyItem             PROTO, item:DWORD
 CalcRoundScore      PROTO                           ; EAX = score for this round
 ShowSummary         PROTO
 

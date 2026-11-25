@@ -64,6 +64,12 @@ TestGameState PROC
     mAssertEq energy, 120, "Easy starts with 120 energy"
     mov  difficulty, DIFF_NORMAL
 
+    mov  totalRescued, 9
+    mov  totalLost, 4
+    call ResetGameState
+    mAssertEq totalRescued, 0, "totalRescued reset to 0"
+    mAssertEq totalLost, 0, "totalLost reset to 0"
+
     INVOKE GetDiffName, DIFF_NORMAL
     INVOKE StrEqual, eax, ADDR gsNormal
     mAssertEq eax, 1, "GetDiffName NORMAL"

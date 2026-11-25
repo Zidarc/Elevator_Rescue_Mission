@@ -177,6 +177,7 @@ RunRound PROC USES eax ebx edx
     call ClearGameScreen
     call GetMseconds
     mov  lastTickMs, eax
+    call CalcRoundScore
     call DrawGameState
 
 frameLoop:
@@ -212,6 +213,7 @@ checkEnd:
     jnz  roundFinished
     test ebx, ebx
     jz   frameLoop
+    call CalcRoundScore
     call DrawGameState
     jmp  frameLoop
 
@@ -233,6 +235,13 @@ RunGame PROC USES eax
 roundLoop:
     call InitializeGame
     call RunRound
+    call CalcRoundScore
+    add  totalScore, eax
+    mov  eax, rescuedNormal
+    add  eax, rescuedCritical
+    add  totalRescued, eax
+    mov  eax, casualties
+    add  totalLost, eax
     call ShowRoundOver
     cmp  quitRequested, 0
     jne  gameOver
@@ -244,6 +253,8 @@ roundLoop:
 
 gameOver:
     INVOKE SetCursorVisible, 1
+    call ShowSummary
+    call WaitMsg
     ret
 RunGame ENDP
 
