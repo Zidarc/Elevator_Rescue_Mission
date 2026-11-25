@@ -173,7 +173,7 @@ HandleCommand ENDP
 ; Receives: a building prepared by InitializeGame
 ; Returns:  when CheckRoundOver reports the round has ended
 ;---------------------------------------------------------------------
-RunRound PROC USES eax ebx
+RunRound PROC USES eax ebx edx
     call Clrscr
     call GetMseconds
     mov  lastTickMs, eax
@@ -193,12 +193,18 @@ frameLoop:
 
 checkTimer:
     call GetMseconds
+    mov  edx, eax
     sub  eax, lastTickMs                ; ms since the last tick
+    jb   clockWrapped
     cmp  eax, TICK_MS
     jb   checkEnd
     add  lastTickMs, TICK_MS
     call TickFloors
     mov  ebx, 1
+    jmp  checkEnd
+
+clockWrapped:
+    mov  lastTickMs, edx
 
 checkEnd:
     call CheckRoundOver
