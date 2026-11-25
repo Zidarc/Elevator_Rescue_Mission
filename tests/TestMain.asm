@@ -19,6 +19,7 @@ TestBuilding  PROTO
 TestElevator  PROTO
 TestScan      PROTO
 TestGameLoop  PROTO
+TestRender    PROTO
 
 .data
 headerMsg   BYTE "Elevator Rescue Simulator - test runner", 0Dh, 0Ah, 0
@@ -36,6 +37,7 @@ testMain PROC
     call TestElevator                   ; Day 3
     call TestScan                       ; Day 4
     call TestGameLoop                   ; Day 4
+    call TestRender
     ; call TestScore                    ; Day 6
     ; call TestScoreboard               ; Day 7
 

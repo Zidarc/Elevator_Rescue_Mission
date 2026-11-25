@@ -200,6 +200,11 @@ DrawIntro           PROTO
 DrawGameState       PROTO
 DrawFloor           PROTO, floorIndex:DWORD
 DrawHud             PROTO
+DrawShop            PROTO
+ShowRoundOver       PROTO
+ClearGameScreen     PROTO
+SetCursorVisible    PROTO, visible:DWORD
+GetTtlColor         PROTO, ttlNow:DWORD, ttlFull:DWORD
 SetStatus           PROTO, pMsg:PTR BYTE
 
 ; --- Shop.asm and Score.asm [Day 6] ---

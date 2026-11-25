@@ -174,7 +174,7 @@ HandleCommand ENDP
 ; Returns:  when CheckRoundOver reports the round has ended
 ;---------------------------------------------------------------------
 RunRound PROC USES eax ebx edx
-    call Clrscr
+    call ClearGameScreen
     call GetMseconds
     mov  lastTickMs, eax
     call DrawGameState
@@ -216,10 +216,6 @@ checkEnd:
     jmp  frameLoop
 
 roundFinished:
-    call DrawGameState
-    call Crlf
-    call Crlf
-    call WaitMsg
     ret
 RunRound ENDP
 
@@ -237,6 +233,7 @@ RunGame PROC USES eax
 roundLoop:
     call InitializeGame
     call RunRound
+    call ShowRoundOver
     cmp  quitRequested, 0
     jne  gameOver
     mov  eax, roundNum
@@ -246,6 +243,7 @@ roundLoop:
     jmp  roundLoop
 
 gameOver:
+    INVOKE SetCursorVisible, 1
     ret
 RunGame ENDP
 
