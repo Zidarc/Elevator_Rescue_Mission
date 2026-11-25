@@ -44,7 +44,7 @@ CopyStatus ENDP
 ; Receives: direction = +1 (up) or -1 (down)
 ; Returns:  EAX = 1 if moved, 0 if refused
 ;---------------------------------------------------------------------
-MoveElevator PROC USES ebx esi, direction:SDWORD
+MoveElevator PROC USES ebx edx esi, direction:SDWORD
     ; --- check energy first ---
     mov  eax, energy
     cmp  eax, MOVE_COST
