@@ -49,6 +49,7 @@ howToPlay   BYTE "  HOW TO PLAY", 0Dh, 0Ah
 ; Shows the menu until the player chooses Quit.
 ;---------------------------------------------------------------------
 RunMainMenu PROC USES eax edx
+    INVOKE DrawIntro
 menuLoop:
     call Clrscr
     mov  edx, OFFSET menuTitle

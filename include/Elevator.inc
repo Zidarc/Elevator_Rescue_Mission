@@ -88,6 +88,8 @@ DIFF_EASY         = 0
 DIFF_NORMAL       = 1
 DIFF_HARD         = 2
 NUM_DIFFICULTIES  = 3
+DIFF_NAME_SIZE    = 8
+NUM_BUF_SIZE      = 12
 
 ;---------------------------------------------------------------------
 ; Scoreboard
@@ -159,6 +161,7 @@ EXTERNDEF statusMsg:BYTE            ; message line shown under the HUD
 ; --- GameState.asm [Day 1] ---
 ResetGameState      PROTO                           ; new game: score, credits, round 1, energy from difficulty
 GetDiffSetting      PROTO                           ; returns ESI = OFFSET of current DiffSetting
+GetDiffName         PROTO, level:DWORD
 
 ; --- StrUtil.asm [Day 1] ---  (string primitives)
 StrLen              PROTO, pStr:PTR BYTE            ; EAX = length
@@ -167,6 +170,7 @@ StrEqual            PROTO, pStr1:PTR BYTE, pStr2:PTR BYTE              ; EAX = 1
 StrFill             PROTO, pDest:PTR BYTE, count:DWORD, fillChar:DWORD ; count chars + null
 StrToUpper          PROTO, pStr:PTR BYTE            ; in place, a-z only
 StrPadRight         PROTO, pStr:PTR BYTE, fieldWidth:DWORD  ; pad with spaces to fieldWidth
+StrFromUInt         PROTO, value:DWORD, pDest:PTR BYTE
 
 ; --- Menu.asm [Day 1, wired up on later days] ---
 RunMainMenu         PROTO
@@ -196,6 +200,11 @@ DrawIntro           PROTO
 DrawGameState       PROTO
 DrawFloor           PROTO, floorIndex:DWORD
 DrawHud             PROTO
+DrawShop            PROTO
+ShowRoundOver       PROTO
+ClearGameScreen     PROTO
+SetCursorVisible    PROTO, visible:DWORD
+GetTtlColor         PROTO, ttlNow:DWORD, ttlFull:DWORD
 SetStatus           PROTO, pMsg:PTR BYTE
 
 ; --- Shop.asm and Score.asm [Day 6] ---
