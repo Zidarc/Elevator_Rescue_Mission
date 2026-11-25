@@ -5,6 +5,11 @@ INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
 INCLUDE TestFramework.inc
 
+.data
+gsNormal    BYTE "NORMAL", 0
+gsHard      BYTE "HARD", 0
+gsUnknown   BYTE "?", 0
+
 .code
 TestGameState PROC
     mSuite "GameState"
@@ -58,6 +63,16 @@ TestGameState PROC
     call ResetGameState
     mAssertEq energy, 120, "Easy starts with 120 energy"
     mov  difficulty, DIFF_NORMAL
+
+    INVOKE GetDiffName, DIFF_NORMAL
+    INVOKE StrEqual, eax, ADDR gsNormal
+    mAssertEq eax, 1, "GetDiffName NORMAL"
+    INVOKE GetDiffName, DIFF_HARD
+    INVOKE StrEqual, eax, ADDR gsHard
+    mAssertEq eax, 1, "GetDiffName HARD"
+    INVOKE GetDiffName, 77
+    INVOKE StrEqual, eax, ADDR gsUnknown
+    mAssertEq eax, 1, "GetDiffName out of range is ?"
     ret
 TestGameState ENDP
 

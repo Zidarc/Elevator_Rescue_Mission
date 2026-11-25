@@ -147,4 +147,27 @@ finished:
     ret
 StrPadRight ENDP
 
+StrFromUInt PROC USES ebx ecx edx edi, value:DWORD, pDest:PTR BYTE
+    mov  eax, value
+    mov  edi, pDest
+    mov  ebx, 10
+    xor  ecx, ecx
+pushDigit:
+    xor  edx, edx
+    div  ebx
+    add  dl, '0'
+    push edx
+    inc  ecx
+    test eax, eax
+    jnz  pushDigit
+    mov  eax, ecx
+popDigit:
+    pop  edx
+    mov  [edi], dl
+    inc  edi
+    loop popDigit
+    mov  BYTE PTR [edi], 0
+    ret
+StrFromUInt ENDP
+
 END

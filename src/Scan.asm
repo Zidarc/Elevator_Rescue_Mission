@@ -85,31 +85,6 @@ scanReturn:
 ScanFloorsRecursive ENDP
 
 ;---------------------------------------------------------------------
-; UIntToStr  (private helper)
-; Converts an unsigned number to a decimal string with repeated DIV.
-; Receives: EAX = value, EDI = OFFSET of a buffer of at least 11 bytes
-; Returns:  buffer holds the null-terminated digits
-;---------------------------------------------------------------------
-UIntToStr PROC USES eax ebx ecx edx edi
-    mov  ebx, 10
-    xor  ecx, ecx                       ; digit count
-pushDigits:
-    xor  edx, edx
-    div  ebx                            ; EAX = EAX / 10, EDX = digit
-    add  dl, '0'
-    push edx                            ; digits come out reversed
-    inc  ecx
-    test eax, eax
-    jnz  pushDigits
-popDigits:
-    pop  eax
-    stosb                               ; [EDI] = AL, EDI++
-    loop popDigits
-    mov  BYTE PTR [edi], 0
-    ret
-UIntToStr ENDP
-
-;---------------------------------------------------------------------
 ; ScanAction
 ; The X key. Costs SCAN_COST energy, scans from the elevator's floor
 ; upwards and from the floor below it downwards, and reports the
@@ -141,9 +116,7 @@ ScanAction PROC USES ebx esi edi
 
     ; --- statusMsg = prefix + number + suffix ---
     INVOKE StrCopyN, ADDR statusMsg, ADDR msgScanPrefix, STATUS_SIZE
-    mov  eax, ebx
-    mov  edi, OFFSET numBuffer
-    call UIntToStr
+    INVOKE StrFromUInt, ebx, ADDR numBuffer
     INVOKE StrLen, ADDR statusMsg
     mov  esi, OFFSET statusMsg
     add  esi, eax                       ; ESI = end of the prefix

@@ -13,6 +13,9 @@ sEmpty      BYTE 0
 sEmpty2     BYTE 0
 sMixed      BYTE "aLi 25k!", 0
 sMixedUp    BYTE "ALI 25K!", 0
+sZero       BYTE "0", 0
+s12345      BYTE "12345", 0
+sMaxDword   BYTE "4294967295", 0
 buffer      BYTE 32 DUP(?)
 
 .code
@@ -70,6 +73,18 @@ TestStrUtil PROC
     mAssertEq eax, 3, "StrFill writes count characters"
     movzx eax, buffer[2]
     mAssertEq eax, '*', "StrFill uses the fill character"
+
+    INVOKE StrFromUInt, 0, ADDR buffer
+    mAssertEq eax, 1, "StrFromUInt 0 has 1 digit"
+    INVOKE StrEqual, ADDR buffer, ADDR sZero
+    mAssertEq eax, 1, "StrFromUInt 0 is the text 0"
+    INVOKE StrFromUInt, 12345, ADDR buffer
+    INVOKE StrEqual, ADDR buffer, ADDR s12345
+    mAssertEq eax, 1, "StrFromUInt 12345"
+    INVOKE StrFromUInt, 0FFFFFFFFh, ADDR buffer
+    mAssertEq eax, 10, "StrFromUInt largest DWORD has 10 digits"
+    INVOKE StrEqual, ADDR buffer, ADDR sMaxDword
+    mAssertEq eax, 1, "StrFromUInt 4294967295"
     ret
 TestStrUtil ENDP
 

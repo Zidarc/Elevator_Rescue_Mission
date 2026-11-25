@@ -15,6 +15,11 @@ difficultyTable DiffSetting <45, 75, 120, 1, 10>   ; Easy
                 DiffSetting <30, 60, 100, 2, 15>   ; Normal
                 DiffSetting <20, 40,  80, 3, 25>   ; Hard
 
+diffNames       BYTE "EASY", DIFF_NAME_SIZE - 4 DUP(0)
+                BYTE "NORMAL", DIFF_NAME_SIZE - 6 DUP(0)
+                BYTE "HARD", DIFF_NAME_SIZE - 4 DUP(0)
+diffUnknown     BYTE "?", 0
+
 ;---------------------------------------------------------------------
 ; Building
 ;---------------------------------------------------------------------
@@ -66,6 +71,17 @@ GetDiffSetting PROC USES eax edx
     add  esi, eax
     ret
 GetDiffSetting ENDP
+
+GetDiffName PROC, level:DWORD
+    mov  eax, OFFSET diffUnknown
+    cmp  level, NUM_DIFFICULTIES
+    jae  nameDone
+    mov  eax, level
+    imul eax, eax, DIFF_NAME_SIZE
+    add  eax, OFFSET diffNames
+nameDone:
+    ret
+GetDiffName ENDP
 
 ;---------------------------------------------------------------------
 ; ResetGameState
