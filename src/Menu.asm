@@ -1,11 +1,6 @@
 ;=====================================================================
 ; Menu.asm
 ; Main menu and the How to Play screen.
-;
-; Day 1 ships the menu with placeholders. Later owners replace them:
-;   Day 4: "New Game"    -> INVOKE RunGame
-;   Day 5: title screen  -> INVOKE DrawIntro before the menu loop
-;   Day 7: "High Scores" -> INVOKE ShowScores, and LoadScores at start
 ;=====================================================================
 INCLUDE Irvine32.inc
 INCLUDE Elevator.inc
@@ -19,9 +14,6 @@ menuOptions BYTE "    1. New Game", 0Dh, 0Ah
             BYTE "    3. How to Play", 0Dh, 0Ah
             BYTE "    4. Quit", 0Dh, 0Ah, 0Dh, 0Ah
             BYTE "  Select an option: ", 0
-
-msgNotReady BYTE 0Dh, 0Ah, 0Dh, 0Ah, "  This option is not implemented yet.", 0Dh, 0Ah, 0
-msgScores   BYTE "  High Scores arrive on Day 7 (Scoreboard.asm).", 0Dh, 0Ah, 0
 
 howToPlay   BYTE "  HOW TO PLAY", 0Dh, 0Ah
             BYTE "  -----------", 0Dh, 0Ah
@@ -80,11 +72,7 @@ optNewGame:
     jmp  menuLoop
 
 optScores:
-    mov  edx, OFFSET msgNotReady
-    call WriteString
-    mov  edx, OFFSET msgScores
-    call WriteString
-    call WaitMsg
+    INVOKE ShowScores
     jmp  menuLoop
 
 optHelp:

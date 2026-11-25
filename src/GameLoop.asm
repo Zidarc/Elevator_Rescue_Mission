@@ -258,7 +258,7 @@ roundLoop:
 gameOver:
     INVOKE SetCursorVisible, 1
     call ShowSummary
-    call WaitMsg
+    call RecordScore
     ret
 RunGame ENDP
 
