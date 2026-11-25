@@ -67,6 +67,9 @@ SHOP_ENERGY_COST    = 20            ; +40 energy
 SHOP_ENERGY_GAIN    = 40
 SHOP_FREEZE_COST    = 50            ; +10 s TTL on every waiting floor
 SHOP_FREEZE_GAIN    = 10
+SHOP_ITEM_CAPACITY  = 1
+SHOP_ITEM_ENERGY    = 2
+SHOP_ITEM_FREEZE    = 3
 
 ;---------------------------------------------------------------------
 ; Scoring
@@ -196,6 +199,7 @@ RunGame             PROTO                           ; difficulty -> rounds -> su
 RunRound            PROTO
 HandleCommand       PROTO, key:DWORD
 CheckRoundOver      PROTO                           ; sets roundOver
+AnyCiviliansWaiting PROTO
 
 ; --- Render.asm [Day 5] ---
 DrawIntro           PROTO

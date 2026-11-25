@@ -34,14 +34,17 @@ howToPlay   BYTE "  HOW TO PLAY", 0Dh, 0Ah
             BYTE "    A  Action: pick up civilians, collect an energy pack,", 0Dh, 0Ah
             BYTE "       or drop passengers off at the lobby", 0Dh, 0Ah
             BYTE "    X  Scan the building for waiting civilians (costs energy)", 0Dh, 0Ah
-            BYTE "    B  Shop (lobby only): capacity, energy, time freeze", 0Dh, 0Ah
+            BYTE "    B  Shop (lobby only): capacity, energy, time freeze.", 0Dh, 0Ah
+            BYTE "       Timers are paused while the shop is open.", 0Dh, 0Ah
             BYTE "    Q  Quit: the game ends and your score is still recorded", 0Dh, 0Ah, 0Dh, 0Ah
             BYTE "  FLOORS", 0Dh, 0Ah
             BYTE "    Normal    1-4 civilians, 100 points each", 0Dh, 0Ah
             BYTE "    Critical  1-2 civilians, short timer, 300 points each", 0Dh, 0Ah
             BYTE "    Energy    an energy pack worth +25 energy", 0Dh, 0Ah, 0Dh, 0Ah
-            BYTE "  Each lost civilian costs 50 points. Leftover energy is a bonus.", 0Dh, 0Ah
-            BYTE "  A game has 3 rounds. Easy x1, Normal x2, Hard x3 score multiplier.", 0Dh, 0Ah, 0Dh, 0Ah, 0
+            BYTE "  Each lost civilian costs 50 points. Leftover energy is worth 2", 0Dh, 0Ah
+            BYTE "  points each. Easy x1, Normal x2, Hard x3 score multiplier.", 0Dh, 0Ah
+            BYTE "  Delivered civilians earn credits: 10 normal, 25 critical.", 0Dh, 0Ah
+            BYTE "  A game has 3 rounds, each with shorter timers.", 0Dh, 0Ah, 0Dh, 0Ah, 0
 
 .code
 ;---------------------------------------------------------------------
