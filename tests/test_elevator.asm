@@ -51,15 +51,20 @@ ResetElevatorTestState ENDP
 ; TestMoveUp
 ; A valid upward move from the lobby.
 ;---------------------------------------------------------------------
-TestMoveUp PROC USES eax
+TestMoveUp PROC USES eax edx
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
     mov  energy, 100
 
+    mov  edx, 5A5A5A5Ah
     INVOKE MoveElevator, 1              ; up
     mAssertEq eax, 1, "move up from lobby succeeds"
+    mAssertEq edx, 5A5A5A5Ah, "MoveElevator preserves EDX"
     mAssertEq elevatorFloor, 1, "elevator is now on floor 1"
     mAssertEq energy, 100 - MOVE_COST, "energy reduced by MOVE_COST"
+    movzx eax, floors[1 * SIZEOF FloorInfo].floorFlags
+    and  eax, FLAG_SCANNED
+    mAssertEq eax, FLAG_SCANNED, "arriving on a floor reveals it"
     ret
 TestMoveUp ENDP
 
@@ -416,11 +421,11 @@ TestTickNoDecrementEmpty PROC USES eax
     call ResetElevatorTestState
     ; floor 3: energy pack, no civilians
     mov  floors[3 * SIZEOF FloorInfo].floorFlags, FLAG_ENERGY
-    mov  floors[3 * SIZEOF FloorInfo].ttlLeft, 0
+    mov  floors[3 * SIZEOF FloorInfo].ttlLeft, 12
 
     call TickFloors
     movzx eax, floors[3 * SIZEOF FloorInfo].ttlLeft
-    mAssertEq eax, 0, "ttlLeft unchanged on floor without civilians"
+    mAssertEq eax, 12, "ttlLeft unchanged on floor without civilians"
     ret
 TestTickNoDecrementEmpty ENDP
 
