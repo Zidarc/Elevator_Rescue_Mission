@@ -245,6 +245,8 @@ SaveScores PROC
     ret
 SaveScores ENDP
 
+
+
 ; Loads the table from data\highscores.dat (called when the game starts).
 LoadScores PROC
     INVOKE LoadScoresFrom, ADDR scoreFile
