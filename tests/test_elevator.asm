@@ -1,7 +1,4 @@
 ; test_elevator.asm - tests for MoveElevator, PerformAction and TickFloors.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 .code
 
@@ -486,5 +483,3 @@ TestElevator PROC
     call TestTickCasualtiesAccumulate
     ret
 TestElevator ENDP
-
-END

@@ -1,7 +1,5 @@
 ; Scan.asm - the X key. Scans the whole building using RECURSION:
 ; it reveals every floor and counts how many people are still waiting.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 DIR_UP   = 1
 DIR_DOWN = -1
@@ -114,5 +112,3 @@ scanNoEnergy:
     mov  eax, 0FFFFFFFFh
     ret
 ScanAction ENDP
-
-END

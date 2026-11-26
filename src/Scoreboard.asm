@@ -1,9 +1,7 @@
 ; Scoreboard.asm - the top 10 high scores.
-; Keeps the table sorted (insertion sort), saves it to
+; Keeps the table sorted (bubble sort), saves it to
 ; data\highscores.dat and loads it back when the game starts.
 ; File = the count (4 bytes) followed by the whole table.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 TABLE_BYTES  = MAX_SCORES * SIZEOF HighScore
 NAME_INPUT   = 64
@@ -46,83 +44,115 @@ ClearScores PROC USES eax ecx edi
     ret
 ClearScores ENDP
 
-; Adds a new score to the table and keeps it sorted, highest first
-; (insertion sort):
-;   1. find the first record with a smaller score - that is the new slot
-;   2. move every record from that slot down by one place. All of them
-;      are moved in one go with REP MOVSB, copying BACKWARDS (STD) from
-;      the last byte, so no record is overwritten before it is moved.
-;      If the table is full the 10th record falls off.
-;   3. write the new name and score in the free slot
-; Equal scores: the new one goes below the old one.
-; EAX = rank 1-10, or 0 if the score is too low for the table.
-InsertScoreSorted PROC USES ebx ecx esi edi,
-        pName:PTR BYTE, scoreValue:DWORD, levelValue:DWORD, roundsValue:DWORD
-    xor  ebx, ebx
-    mov  esi, OFFSET highScores
-findSlot:
-    cmp  ebx, highScoreCount
-    jae  slotFound
-    mov  eax, (HighScore PTR [esi]).points
-    cmp  eax, scoreValue                ; old score < new score? then this is the slot
-    jb   slotFound
-    inc  ebx
-    add  esi, SIZEOF HighScore
-    jmp  findSlot
-
-slotFound:
-    xor  eax, eax
-    cmp  ebx, MAX_SCORES
-    jae  insertDone
-
-    mov  ecx, highScoreCount
-    cmp  ecx, MAX_SCORES - 1            ; at most 9 records can move down (the 10th falls off)
-    jbe  countReady
-    mov  ecx, MAX_SCORES - 1
-countReady:
-    sub  ecx, ebx                       ; ECX = how many records must move
-    jbe  writeRecord
-    imul ecx, ecx, SIZEOF HighScore     ; records -> bytes (24 bytes each)
-    lea  esi, [esi + ecx - 1]           ; ESI = last byte to move
-    lea  edi, [esi + SIZEOF HighScore]  ; EDI = one record further down
-    std                                 ; copy backwards so nothing is overwritten
-    rep  movsb                          ; move all the records down one place
-    cld
-
-writeRecord:
-    imul edi, ebx, SIZEOF HighScore     ; EDI = address of the free slot
-    add  edi, OFFSET highScores
-    mov  esi, edi
-    mov  ecx, SIZEOF HighScore
-    xor  eax, eax
-    cld
-    rep  stosb
-    INVOKE StrCopyN, esi, pName, NAME_SIZE
-    mov  eax, scoreValue
-    mov  (HighScore PTR [esi]).points, eax
-    mov  eax, levelValue
-    mov  (HighScore PTR [esi]).level, al
-    mov  eax, roundsValue
-    mov  (HighScore PTR [esi]).roundsDone, al
-
-    cmp  highScoreCount, MAX_SCORES
-    jae  rankReady
-    inc  highScoreCount
-rankReady:
-    lea  eax, [ebx + 1]                 ; rank = slot index + 1
-insertDone:
+; Swaps two neighbouring records of the table: the one at ESI and the
+; one right after it (24 bytes each), one byte at a time.
+SwapRecords PROC USES eax ebx ecx esi
+    mov  ecx, SIZEOF HighScore          ; 24 bytes to swap
+swapByte:
+    mov  al, [esi]                      ; byte from the first record
+    mov  bl, [esi + SIZEOF HighScore]   ; same byte from the next record
+    mov  [esi], bl
+    mov  [esi + SIZEOF HighScore], al
+    inc  esi
+    loop swapByte
     ret
-InsertScoreSorted ENDP
+SwapRecords ENDP
+
+; Bubble sort (like BubbleSort in the Irvine book), highest score first.
+; Each pass walks down the table, compares every record with the next one
+; and swaps them if the next one has the higher score. After each pass the
+; smallest score has sunk to the bottom, so the next pass is one shorter.
+; Equal scores are never swapped, so an older score stays above a new one.
+SortScores PROC USES eax ecx esi
+    mov  ecx, highScoreCount
+    cmp  ecx, 1
+    jbe  sortDone                       ; 0 or 1 record: already sorted
+    dec  ecx                            ; passes = count - 1
+outerLoop:
+    push ecx                            ; save the pass counter
+    mov  esi, OFFSET highScores         ; start at the top
+innerLoop:
+    mov  eax, (HighScore PTR [esi]).points
+    cmp  eax, (HighScore PTR [esi + SIZEOF HighScore]).points
+    jae  noSwap                         ; this one is bigger or equal: OK
+    call SwapRecords                    ; next one is bigger: swap them
+noSwap:
+    add  esi, SIZEOF HighScore          ; move to the next pair
+    loop innerLoop
+    pop  ecx                            ; get the pass counter back
+    loop outerLoop
+sortDone:
+    ret
+SortScores ENDP
+
+; Adds a new score to the high-score table:
+;   - if the table is not full, the new record goes at the bottom
+;   - if it is full, it replaces the 10th record, but only if it is better
+; Then the table is sorted again with bubble sort.
+; EAX = the new score's rank (1-10), or 0 if it did not get into the table.
+AddHighScore PROC USES ebx ecx edx esi edi,
+        pName:PTR BYTE, scoreValue:DWORD, levelValue:DWORD, roundsValue:DWORD
+    ; choose the slot for the new record
+    mov  eax, highScoreCount            ; EAX = first empty slot
+    cmp  eax, MAX_SCORES
+    jb   haveSlot                       ; table not full yet
+    mov  esi, OFFSET highScores + (MAX_SCORES - 1) * SIZEOF HighScore
+    mov  ebx, (HighScore PTR [esi]).points
+    cmp  scoreValue, ebx
+    jbe  notAdded                       ; not better than the 10th score
+    mov  eax, MAX_SCORES - 1            ; replace the 10th record
+    dec  highScoreCount                 ; (count goes back up below)
+haveSlot:
+    inc  highScoreCount
+
+    ; EDI = address of the slot = highScores + slot * 24
+    mov  ebx, SIZEOF HighScore
+    mul  ebx
+    mov  edi, OFFSET highScores
+    add  edi, eax
+
+    ; clear the slot, then fill in name, score, level and rounds
+    INVOKE StrFill, edi, SIZEOF HighScore - 1, 0
+    INVOKE StrCopyN, edi, pName, NAME_SIZE      ; name, cut to 15 letters
+    mov  eax, scoreValue
+    mov  (HighScore PTR [edi]).points, eax
+    mov  eax, levelValue
+    mov  (HighScore PTR [edi]).level, al
+    mov  eax, roundsValue
+    mov  (HighScore PTR [edi]).roundsDone, al
+
+    call SortScores
+
+    ; rank = how many scores are bigger than or equal to the new one
+    ; (the new one is below the equal ones, so it counts itself too)
+    xor  eax, eax
+    mov  ecx, highScoreCount
+    mov  esi, OFFSET highScores
+countRank:
+    mov  ebx, (HighScore PTR [esi]).points
+    cmp  ebx, scoreValue
+    jb   nextRecord
+    inc  eax
+nextRecord:
+    add  esi, SIZEOF HighScore
+    loop countRank
+    ret
+
+notAdded:
+    xor  eax, eax
+    ret
+AddHighScore ENDP
 
 ; Is the score in EAX good enough for the table?
 ; Yes if the table is not full yet, or it beats the 10th score.
 ; EAX = 1 yes, 0 no.
-ScoreQualifies PROC
+ScoreQualifies PROC USES esi
     test eax, eax
     jz   notQualified
     cmp  highScoreCount, MAX_SCORES
     jb   qualified
-    cmp  eax, highScores[(MAX_SCORES - 1) * SIZEOF HighScore].points ; compare with the 10th score
+    mov  esi, OFFSET highScores + (MAX_SCORES - 1) * SIZEOF HighScore ; ESI = the 10th record
+    cmp  eax, (HighScore PTR [esi]).points ; better than the 10th score?
     ja   qualified
 notQualified:
     xor  eax, eax
@@ -193,7 +223,7 @@ LoadScoresFrom PROC USES ebx ecx edx esi, pFile:PTR BYTE
     mov  esi, OFFSET highScores
     mov  ecx, MAX_SCORES
 terminateNames:
-    mov  (HighScore PTR [esi]).playerName[NAME_SIZE - 1], 0 ; make sure every name ends with 0
+    mov  BYTE PTR [esi + NAME_SIZE - 1], 0 ; make sure every name ends with 0
     add  esi, SIZEOF HighScore
     loop terminateNames
 
@@ -257,7 +287,8 @@ rowLoop:
 
     mov  edx, OFFSET tblIndent
     call WriteString
-    lea  eax, [ebx + 1]
+    mov  eax, ebx                       ; rank = index + 1
+    inc  eax
     cmp  eax, 10
     jae  wideRank
     mov  edx, OFFSET tblSpace
@@ -327,7 +358,7 @@ RecordScore PROC USES ebx ecx edx
     INVOKE StrCopyN, ADDR nameBuffer, ADDR defaultName, NAME_SIZE
 haveName:
     INVOKE StrToUpper, ADDR nameBuffer
-    INVOKE InsertScoreSorted, ADDR nameBuffer, totalScore, difficulty, roundNum
+    INVOKE AddHighScore, ADDR nameBuffer, totalScore, difficulty, roundNum
     mov  ebx, eax
 
     call SaveScores
@@ -347,5 +378,3 @@ waitAndLeave:
     xor  eax, eax
     ret
 RecordScore ENDP
-
-END

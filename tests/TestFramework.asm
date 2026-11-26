@@ -2,9 +2,6 @@
 ; Counts passed and failed checks and prints PASS / FAIL lines.
 ; It prints with WriteFile instead of WriteString so the output still
 ; shows when it is redirected to a file.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 .data
 testsPassed DWORD 0
@@ -18,7 +15,7 @@ gotTag      BYTE ", got ", 0
 closeTag    BYTE ")", 0
 suiteTag    BYTE 0Dh, 0Ah, "== ", 0
 newLine     BYTE 0Dh, 0Ah, 0
-numBuffer   BYTE 12 DUP(0)
+testNumBuffer   BYTE 12 DUP(0)
 
 .code
 ; Prints a string to the standard output.
@@ -35,7 +32,7 @@ TPrint ENDP
 
 ; Prints a signed number (dividing by 10 to get each digit).
 TPrintInt PROC USES eax ebx ecx edx edi, value:SDWORD
-    mov  edi, OFFSET numBuffer + (SIZEOF numBuffer - 1)
+    mov  edi, OFFSET testNumBuffer + (SIZEOF testNumBuffer - 1)
     mov  BYTE PTR [edi], 0              ; terminator
     mov  eax, value
     xor  ecx, ecx                       ; ECX = 1 if negative
@@ -109,5 +106,3 @@ PrintSuite PROC USES eax, pName:PTR BYTE
     call SetTextColor
     ret
 PrintSuite ENDP
-
-END

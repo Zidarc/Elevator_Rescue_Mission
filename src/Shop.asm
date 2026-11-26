@@ -1,7 +1,5 @@
 ; Shop.asm - the shop in the lobby (B key). Credits come from
 ; rescuing people and are spent here on upgrades.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 KEY_ESCAPE = 1Bh
 
@@ -147,5 +145,3 @@ leaveShop:
     mov  eax, 1
     ret
 BuyInLobby ENDP
-
-END

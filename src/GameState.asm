@@ -1,8 +1,6 @@
 ; GameState.asm - every global variable of the game lives here
 ; (building, elevator, energy, score, high scores, difficulty table).
-; Other files reach these variables through EXTERNDEF in Elevator.inc.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
+; main.asm includes this file first, so every other part can use them.
 
 .data
 ; Difficulty table: one DiffSetting per level, indexed by difficulty
@@ -61,12 +59,13 @@ GetDiffSetting ENDP
 ; Gives the text "EASY", "NORMAL" or "HARD" for a level in EAX.
 ; Every name takes 8 bytes, so address = diffNames + level * 8.
 ; A wrong level gives "?".
-GetDiffName PROC, level:DWORD
+GetDiffName PROC USES ebx edx, level:DWORD
     mov  eax, OFFSET diffUnknown
     cmp  level, NUM_DIFFICULTIES
     jae  nameDone
     mov  eax, level
-    imul eax, eax, DIFF_NAME_SIZE
+    mov  ebx, DIFF_NAME_SIZE
+    mul  ebx                            ; EAX = level * 8
     add  eax, OFFSET diffNames
 nameDone:
     ret
@@ -99,5 +98,3 @@ ResetGameState PROC USES eax esi
     mov  statusMsg, 0                   ; empty message
     ret
 ResetGameState ENDP
-
-END

@@ -1,7 +1,4 @@
 ; test_strutil.asm - tests for the string functions in StrUtil.asm.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 .data
 sHello      BYTE "HELLO", 0
@@ -86,5 +83,3 @@ TestStrUtil PROC
     mAssertEq eax, 1, "StrFromUInt 4294967295"
     ret
 TestStrUtil ENDP
-
-END

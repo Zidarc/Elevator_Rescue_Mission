@@ -4,9 +4,6 @@
 ;   floor 5  critical, 2 people
 ;   floor 7  expired   (people lost, must not be counted)
 ;   floor 8  energy pack
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 FIXTURE_TOTAL = 5
 MIDDLE_FLOOR  = 5
@@ -179,5 +176,3 @@ TestScan PROC
     call ResetScanTestState             ; leave a clean building behind
     ret
 TestScan ENDP
-
-END

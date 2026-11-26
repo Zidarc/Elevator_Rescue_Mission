@@ -8,7 +8,7 @@ This is the final demonstration from README Section 18, as a script to rehearse.
 2. **For an empty high-score table at the start**, delete `data\highscores.dat`. Keep the `data` folder.
 3. Run `build.bat clean`, so the build happens from scratch in front of the audience.
 4. Make the console window at least **80 × 25**, and turn the sound on.
-5. Open these files in the editor, ready for step 13: `include\Elevator.inc`, `src\Scan.asm`, `src\Scoreboard.asm`, `src\StrUtil.asm`.
+5. Open these files in the editor, ready for step 13: `src\Constants.inc`, `src\Scan.asm`, `src\Scoreboard.asm`, `src\StrUtil.asm`.
 
 Suggested speakers (each one presents the modules they built, following the README schedule):
 
@@ -94,16 +94,16 @@ Suggested speakers (each one presents the modules they built, following the READ
 
 | Show | Where |
 |---|---|
-| `STRUCT` definitions | [include/Elevator.inc:108](../include/Elevator.inc#L108) (`FloorInfo`), [:124](../include/Elevator.inc#L124) (`HighScore`) |
-| Bit flags | [include/Elevator.inc:28](../include/Elevator.inc#L28) |
-| A `CMP` / `Jcc` decision | [src/Elevator.asm:51](../src/Elevator.asm#L51) (energy check), [:61](../src/Elevator.asm#L61) (top floor) |
-| String primitives | [src/StrUtil.asm:22](../src/StrUtil.asm#L22) (`REPNE SCASB`), [:75](../src/StrUtil.asm#L75) (`REPE CMPSB`) |
-| Recursion + stack frame | [src/Scan.asm:44](../src/Scan.asm#L44), `RET 8` at [:84](../src/Scan.asm#L84) |
-| Insertion sort, overlapping copy | [src/Scoreboard.asm:44](../src/Scoreboard.asm#L44), `STD` + `REP MOVSB` at [:73](../src/Scoreboard.asm#L73) |
-| File I/O | [src/Scoreboard.asm:117](../src/Scoreboard.asm#L117) (save), [:146](../src/Scoreboard.asm#L146) (load) |
-| `MUL` with the multiplier | [src/Score.asm:44](../src/Score.asm#L44) |
-| TTL colour with shifts | [src/Render.asm:141](../src/Render.asm#L141) |
-| Real-time loop | [src/GameLoop.asm:207](../src/GameLoop.asm#L207) |
+| `STRUCT` definitions | [src/Constants.inc:80](../src/Constants.inc#L80) (`FloorInfo`), [:96](../src/Constants.inc#L96) (`HighScore`) |
+| Bit flags | [src/Constants.inc:13](../src/Constants.inc#L13) |
+| A `CMP` / `Jcc` decision | [src/Elevator.asm:35](../src/Elevator.asm#L35) (energy check), [:45](../src/Elevator.asm#L45) (top floor) |
+| String primitives | [src/StrUtil.asm:13](../src/StrUtil.asm#L13) (`REPNE SCASB`), [:58](../src/StrUtil.asm#L58) (`REPE CMPSB`) |
+| Recursion + stack frame | [src/Scan.asm:24](../src/Scan.asm#L24), `RET 8` at [:64](../src/Scan.asm#L64) |
+| Bubble sort | [src/Scoreboard.asm:66](../src/Scoreboard.asm#L66) (`SortScores`), swap at [:49](../src/Scoreboard.asm#L49) |
+| File I/O | [src/Scoreboard.asm:167](../src/Scoreboard.asm#L167) (save), [:199](../src/Scoreboard.asm#L199) (load) |
+| `MUL` with the multiplier | [src/Score.asm:47](../src/Score.asm#L47) |
+| TTL colour with shifts | [src/Render.asm:153](../src/Render.asm#L153) |
+| Real-time loop | [src/GameLoop.asm:190](../src/GameLoop.asm#L190) |
 
 ### 14. Course topics (1 min)
 
@@ -115,7 +115,7 @@ Walk through the table in README Section 7. Each row is a chapter of the textboo
 
 | Problem | Fix |
 |---|---|
-| `Irvine32 not found` | `set IRVINE_DIR=<path>` and run again |
+| `Irvine32 not found` | Put Irvine32 in `C:\Irvine` or `C:\Irvine32-master`, or `set IRVINE_DIR=<path>` |
 | `ml.exe not found` | Use the *Developer Command Prompt for VS (x86)* |
 | Screen looks broken | Make the window at least 80 × 25 and restart the game |
 | *Could not save data\highscores.dat* | Run from the project root (`build.bat run` does this). The `data` folder must exist |

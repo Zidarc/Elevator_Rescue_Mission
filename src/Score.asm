@@ -1,6 +1,4 @@
 ; Score.asm - calculates the round score and shows the game-over summary.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 .data
 sumTitle    BYTE "  =========================================", 0Dh, 0Ah
@@ -121,5 +119,3 @@ printLevel:
     call SetTextColor
     ret
 ShowSummary ENDP
-
-END

@@ -1,7 +1,4 @@
 ; test_gamestate.asm - tests for GameState.asm.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 .data
 gsNormal    BYTE "NORMAL", 0
@@ -80,5 +77,3 @@ TestGameState PROC
     mAssertEq eax, 1, "GetDiffName out of range is ?"
     ret
 TestGameState ENDP
-
-END
