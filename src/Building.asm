@@ -193,6 +193,7 @@ buildDone:
     mov  passengersNormal, eax
     mov  passengersCritical, eax
     mov  roundOver, 0
+    mov  statusMsg, 0                   ; empty message line for the new round
 
     cmp  roundNum, 1
     jbe  initDone                       ; round 1 keeps the starting energy
