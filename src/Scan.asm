@@ -1,6 +1,3 @@
-; Scan.asm - the X key. Scans the whole building using RECURSION:
-; it reveals every floor and counts how many people are still waiting.
-
 DIR_UP   = 1
 DIR_DOWN = -1
 
@@ -8,19 +5,9 @@ DIR_DOWN = -1
 msgScanNoEnergy BYTE "Not enough energy to scan.", 0
 msgScanPrefix   BYTE "Scan complete: ", 0
 msgScanSuffix   BYTE " civilians waiting.", 0
-numBuffer       BYTE 12 DUP(0)              ; up to 10 digits + null
+numBuffer       BYTE 12 DUP(0)
 
 .code
-; Recursive function. Scans one floor, then calls ITSELF for the next
-; floor in the same direction, and adds up the people it finds.
-; Parameters are pushed on the stack by the caller and read with EBP:
-;   [ebp+8]  = floor number
-;   [ebp+12] = direction (+1 up, -1 down)
-; Base case (stop): the floor number is past floor 9. Going below the
-; lobby gives 0 - 1 = FFFFFFFFh, which is also "past 9" as an unsigned
-; number, so one compare stops both ends.
-; Returns EAX = people on this floor + all floors after it.
-; RET 8 removes the two parameters from the stack.
 ScanFloorsRecursive PROC
     push ebp
     mov  ebp, esp
@@ -32,18 +19,17 @@ ScanFloorsRecursive PROC
     cmp  ecx, TOP_FLOOR
     ja   offTheBuilding                 ; base case
 
-    ; reveal this floor: floors[ecx * SIZEOF FloorInfo]
+    ; mark floor as scanned
     mov  esi, OFFSET floors
     or   (FloorInfo PTR [esi + ecx * SIZEOF FloorInfo]).floorFlags, FLAG_SCANNED
 
-    ; count its civilians if they are still waiting
     xor  ebx, ebx                       ; EBX = civilians on this floor
     test (FloorInfo PTR [esi + ecx * SIZEOF FloorInfo]).floorFlags, FLAG_CIVILIANS
     jz   recurseNext
     movzx ebx, (FloorInfo PTR [esi + ecx * SIZEOF FloorInfo]).civilians
 
 recurseNext:
-    ; ScanFloorsRecursive(floorIndex + direction, direction)
+    ; recursive call
     mov  eax, [ebp+12]                  ; direction
     push eax                            ; param 2: direction
     add  eax, ecx                       ; next floor
@@ -53,7 +39,7 @@ recurseNext:
     jmp  scanReturn
 
 offTheBuilding:
-    xor  eax, eax                       ; nothing past the edge
+    xor  eax, eax
 
 scanReturn:
     pop  esi
@@ -64,9 +50,6 @@ scanReturn:
     ret  8                              ; remove floorIndex and direction
 ScanFloorsRecursive ENDP
 
-; The X key. Costs 5 energy. Calls the recursive scan twice:
-; once going up from the elevator, once going down from the floor below.
-; Shows "Scan complete: N civilians waiting." in the status line.
 ScanAction PROC USES ebx esi edi
     mov  eax, energy
     cmp  eax, SCAN_COST
@@ -74,21 +57,21 @@ ScanAction PROC USES ebx esi edi
     sub  eax, SCAN_COST
     mov  energy, eax
 
-    ; upward: elevator floor .. TOP_FLOOR
+    ; scan up
     push DIR_UP
     push elevatorFloor
     call ScanFloorsRecursive
     mov  ebx, eax                       ; EBX = running total
 
-    ; downward: elevator floor - 1 .. LOBBY
+    ; scan down
     push DIR_DOWN
     mov  eax, elevatorFloor
-    dec  eax                            ; from the lobby this is -1 (base case)
+    dec  eax
     push eax
     call ScanFloorsRecursive
     add  ebx, eax
 
-    ; statusMsg = prefix + number + suffix
+    ; build status message
     INVOKE StrCopyN, ADDR statusMsg, ADDR msgScanPrefix, STATUS_SIZE
     INVOKE StrFromUInt, ebx, ADDR numBuffer
     INVOKE StrLen, ADDR statusMsg

@@ -1,5 +1,3 @@
-; Score.asm - calculates the round score and shows the game-over summary.
-
 .data
 sumTitle    BYTE "  =========================================", 0Dh, 0Ah
             BYTE "                 GAME OVER", 0Dh, 0Ah
@@ -15,10 +13,6 @@ sumLost     BYTE "    Civilians lost    ", 0
 sumTotal    BYTE "    TOTAL SCORE       ", 0
 
 .code
-; Round score formula (MUL for every multiplication):
-;   (normal x 100 + critical x 300 + energy left x 2 - lost x 50) x multiplier
-; Multiplier: Easy 1, Normal 2, Hard 3. The score never goes below 0.
-; EAX = round score (also saved in roundScore).
 CalcRoundScore PROC USES ebx ecx edx esi
     mov  eax, rescuedNormal
     mov  ebx, NORMAL_POINTS
@@ -39,7 +33,7 @@ CalcRoundScore PROC USES ebx ecx edx esi
     mov  ebx, CASUALTY_PENALTY
     mul  ebx
     cmp  ecx, eax
-    jbe  scoreIsZero                    ; penalty too big: score is 0
+    jbe  scoreIsZero
     sub  ecx, eax                       ; - lost x 50
 
     call GetDiffSetting
@@ -54,8 +48,6 @@ storeScore:
     ret
 CalcRoundScore ENDP
 
-; Game-over screen: difficulty, rounds played, total rescued and lost,
-; and the final total score.
 ShowSummary PROC USES eax edx esi
     call Clrscr
     mov  eax, yellow + (black * 16)

@@ -1,5 +1,3 @@
-; Menu.asm - the main menu and the How to Play page.
-
 .data
 menuTitle   BYTE "  =========================================", 0Dh, 0Ah
             BYTE "        ELEVATOR RESCUE SIMULATOR", 0Dh, 0Ah
@@ -34,9 +32,6 @@ howToPlay   BYTE "  HOW TO PLAY", 0Dh, 0Ah
             BYTE "  A game has 3 rounds, each with shorter timers.", 0Dh, 0Ah, 0Dh, 0Ah, 0
 
 .code
-; Shows the intro screen, then the main menu:
-; 1 New Game, 2 High Scores, 3 How to Play, 4 Quit.
-; Keeps showing the menu until the player picks Quit.
 RunMainMenu PROC USES eax edx
     call   DrawIntro
 menuLoop:
@@ -78,7 +73,6 @@ optQuit:
     ret
 RunMainMenu ENDP
 
-; Prints the game rules and controls, waits for a key.
 ShowHowToPlay PROC USES edx
     call Clrscr
     mov  edx, OFFSET howToPlay

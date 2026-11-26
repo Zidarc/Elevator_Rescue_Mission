@@ -1,7 +1,3 @@
-; main.asm - the whole game is built from this one file.
-; The game is split into several .asm files (one per feature) only to keep
-; them short. INCLUDE pastes each file in here, so it is all ONE program:
-; every part can use every variable and every function directly.
 INCLUDE Irvine32.inc
 INCLUDE Constants.inc       ; fixed numbers and STRUCTs
 
@@ -21,10 +17,8 @@ INCLUDE Menu.asm            ; main menu
 consoleTitle BYTE "Elevator Rescue Simulator", 0
 
 .code
-; Program start: seeds the random numbers, sets the window title,
-; loads the saved high scores and opens the main menu.
 main PROC
-    call   Randomize                    ; seed RandomRange
+    call   Randomize
     INVOKE SetConsoleTitle, ADDR consoleTitle
     call   LoadScores
     call   RunMainMenu

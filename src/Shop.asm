@@ -1,6 +1,3 @@
-; Shop.asm - the shop in the lobby (B key). Credits come from
-; rescuing people and are spent here on upgrades.
-
 KEY_ESCAPE = 1Bh
 
 .data
@@ -17,7 +14,6 @@ msgShopWelcome  BYTE "Welcome to the shop. Press 1, 2 or 3 to buy, B to leave.",
 msgShopClosed   BYTE "Shop closed. Timers are running again.", 0
 
 .code
-; Time freeze: adds 10 seconds to every floor that still has people waiting.
 FreezeTimers PROC USES ecx esi
     mov  esi, OFFSET floors
     add  esi, SIZEOF FloorInfo
@@ -32,11 +28,6 @@ freezeNext:
     ret
 FreezeTimers ENDP
 
-; Buys one item if the elevator is in the lobby and there are enough credits:
-;   1 capacity +2 (30 credits)   2 energy +40 (20)   3 time freeze +10 s (50)
-; Capacity and energy can not go past their maximum, and a freeze is
-; refused if nobody is waiting.
-; EAX = 1 if bought, 0 if refused (the reason goes into statusMsg).
 BuyItem PROC USES ebx, item:DWORD
     mov  ebx, OFFSET msgNotLobby
     cmp  elevatorFloor, LOBBY
@@ -107,10 +98,6 @@ refused:
     ret
 BuyItem ENDP
 
-; The shop screen. Keys 1, 2, 3 buy an item, B or Esc leaves.
-; Only opens in the lobby. While the shop is open the game loop is not
-; running, so the timers are paused.
-; EAX = 1 if the shop was opened, 0 if refused (not in the lobby).
 BuyInLobby PROC
     cmp  elevatorFloor, LOBBY
     je   openShop
@@ -121,13 +108,13 @@ BuyInLobby PROC
 openShop:
     INVOKE SetStatus, ADDR msgShopWelcome
 shopLoop:
-    call DrawShop                       ; redraw the shop after every key
+    call DrawShop
     call ReadChar
     cmp  al, '1'
     jb   checkLeave
     cmp  al, '3'
     ja   checkLeave
-    sub  al, '0'                        ; key '1'..'3' -> item number 1..3
+    sub  al, '0'
     movzx eax, al
     INVOKE BuyItem, eax
     jmp  shopLoop

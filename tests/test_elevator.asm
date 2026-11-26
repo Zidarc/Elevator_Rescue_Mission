@@ -1,8 +1,5 @@
-; test_elevator.asm - tests for MoveElevator, PerformAction and TickFloors.
-
 .code
 
-; Puts every variable back to a known starting state before each test.
 ResetElevatorTestState PROC USES eax ecx esi
     mov  difficulty, DIFF_NORMAL
     mov  roundNum, 1
@@ -36,7 +33,6 @@ ResetElevatorTestState ENDP
 
 ; MoveElevator tests
 
-; Moving up from the lobby works and costs energy.
 TestMoveUp PROC USES eax edx
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -54,7 +50,6 @@ TestMoveUp PROC USES eax edx
     ret
 TestMoveUp ENDP
 
-; Moving down from floor 5 works.
 TestMoveDown PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 5
@@ -67,7 +62,6 @@ TestMoveDown PROC USES eax
     ret
 TestMoveDown ENDP
 
-; Moving up from the top floor is refused and uses no energy.
 TestMoveUpFromTop PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, TOP_FLOOR
@@ -80,7 +74,6 @@ TestMoveUpFromTop PROC USES eax
     ret
 TestMoveUpFromTop ENDP
 
-; Moving down from the lobby is refused and uses no energy.
 TestMoveDownFromLobby PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -93,7 +86,6 @@ TestMoveDownFromLobby PROC USES eax
     ret
 TestMoveDownFromLobby ENDP
 
-; Moving with too little energy is refused.
 TestMoveNoEnergy PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 3
@@ -106,7 +98,6 @@ TestMoveNoEnergy PROC USES eax
     ret
 TestMoveNoEnergy ENDP
 
-; Moving with 0 energy is refused.
 TestMoveZeroEnergy PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 5
@@ -118,7 +109,6 @@ TestMoveZeroEnergy PROC USES eax
     ret
 TestMoveZeroEnergy ENDP
 
-; Moving with exactly 2 energy works and leaves 0.
 TestMoveExactEnergy PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 3
@@ -133,7 +123,6 @@ TestMoveExactEnergy ENDP
 
 ; PerformAction tests
 
-; Picking up normal people when there is space.
 TestPickUpNormal PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 3
@@ -157,7 +146,6 @@ pickNFlagStillSet:
     ret
 TestPickUpNormal ENDP
 
-; Only as many people as the free space are taken; the rest stay on the floor.
 TestPickUpPartialCapacity PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 5
@@ -179,7 +167,6 @@ TestPickUpPartialCapacity PROC USES eax
     ret
 TestPickUpPartialCapacity ENDP
 
-; Critical people are counted as critical passengers.
 TestPickUpCritical PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 7
@@ -197,7 +184,6 @@ TestPickUpCritical PROC USES eax
     ret
 TestPickUpCritical ENDP
 
-; Nobody is picked up when the elevator is full.
 TestPickUpFullElevator PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 2
@@ -216,7 +202,6 @@ TestPickUpFullElevator PROC USES eax
     ret
 TestPickUpFullElevator ENDP
 
-; Energy pack gives +25 and is removed from the floor.
 TestCollectEnergyPack PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 4
@@ -232,7 +217,6 @@ TestCollectEnergyPack PROC USES eax
     ret
 TestCollectEnergyPack ENDP
 
-; Energy pack can not take energy above 150.
 TestCollectEnergyCapped PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 4
@@ -245,7 +229,6 @@ TestCollectEnergyCapped PROC USES eax
     ret
 TestCollectEnergyCapped ENDP
 
-; Dropping off in the lobby gives the right points and credits.
 TestDropOffAtLobby PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -265,7 +248,6 @@ TestDropOffAtLobby PROC USES eax
     ret
 TestDropOffAtLobby ENDP
 
-; Dropping off with nobody on board changes nothing.
 TestDropOffEmpty PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -280,7 +262,6 @@ TestDropOffEmpty PROC USES eax
     ret
 TestDropOffEmpty ENDP
 
-; Two drop-offs add up correctly.
 TestDropOffAccumulates PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, LOBBY
@@ -299,11 +280,9 @@ TestDropOffAccumulates PROC USES eax
     ret
 TestDropOffAccumulates ENDP
 
-; Action on an empty floor changes nothing.
 TestActionOnEmptyFloor PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 6
-    ; floor 6 is already clear from reset
 
     call PerformAction
     mAssertEq passengersNormal, 0, "no passengers picked up on empty floor"
@@ -311,7 +290,6 @@ TestActionOnEmptyFloor PROC USES eax
     ret
 TestActionOnEmptyFloor ENDP
 
-; Action on an expired floor does nothing.
 TestActionOnExpiredFloor PROC USES eax
     call ResetElevatorTestState
     mov  elevatorFloor, 8
@@ -324,7 +302,6 @@ TestActionOnExpiredFloor ENDP
 
 ; TickFloors tests
 
-; One tick takes 1 second off a floor with people.
 TestTickDecrement PROC USES eax
     call ResetElevatorTestState
     mov  floors[2 * SIZEOF FloorInfo].civilians, 3
@@ -339,7 +316,6 @@ TestTickDecrement PROC USES eax
     ret
 TestTickDecrement ENDP
 
-; A floor with nobody waiting is not ticked.
 TestTickNoDecrementEmpty PROC USES eax
     call ResetElevatorTestState
     ; floor 3: energy pack, no civilians
@@ -352,7 +328,6 @@ TestTickNoDecrementEmpty PROC USES eax
     ret
 TestTickNoDecrementEmpty ENDP
 
-; When the timer reaches 0 the people become casualties and the floor is expired.
 TestTickExpiry PROC USES eax
     call ResetElevatorTestState
     ; floor 1: 3 civilians, TTL = 1 (will hit 0 on this tick)
@@ -376,7 +351,6 @@ TestTickExpiry PROC USES eax
     ret
 TestTickExpiry ENDP
 
-; A critical floor that expires loses both the people and the critical flag.
 TestTickCriticalExpiry PROC USES eax
     call ResetElevatorTestState
     mov  floors[4 * SIZEOF FloorInfo].civilians, 2
@@ -394,7 +368,6 @@ TestTickCriticalExpiry PROC USES eax
     ret
 TestTickCriticalExpiry ENDP
 
-; Two floors ticked together: one expires, one survives.
 TestTickMultipleFloors PROC USES eax
     call ResetElevatorTestState
     ; floor 1: about to expire
@@ -416,10 +389,9 @@ TestTickMultipleFloors PROC USES eax
     ret
 TestTickMultipleFloors ENDP
 
-; The lobby is never ticked.
 TestTickLobbyIgnored PROC USES eax
     call ResetElevatorTestState
-    ; dirty the lobby (should never happen, but defensive test)
+    ; dirty the lobby
     mov  floors[LOBBY * SIZEOF FloorInfo].civilians, 5
     mov  floors[LOBBY * SIZEOF FloorInfo].floorFlags, FLAG_CIVILIANS
     mov  floors[LOBBY * SIZEOF FloorInfo].ttlLeft, 10
@@ -431,7 +403,6 @@ TestTickLobbyIgnored PROC USES eax
     ret
 TestTickLobbyIgnored ENDP
 
-; Casualties from several floors add up.
 TestTickCasualtiesAccumulate PROC USES eax
     call ResetElevatorTestState
     ; floor 2: expires on first tick
@@ -450,7 +421,6 @@ TestTickCasualtiesAccumulate PROC USES eax
     ret
 TestTickCasualtiesAccumulate ENDP
 
-; Runs all Elevator tests.
 TestElevator PROC
     mSuite "Elevator"
     ; MoveElevator

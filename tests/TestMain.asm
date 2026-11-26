@@ -1,5 +1,3 @@
-; TestMain.asm - the test program. Like main.asm, it pastes in every part
-; of the game with INCLUDE (everything except main.asm), then the test files.
 INCLUDE Irvine32.inc
 INCLUDE Constants.inc
 
@@ -33,8 +31,6 @@ summaryMsg  BYTE 0Dh, 0Ah, "Passed: ", 0
 failedMsg   BYTE "   Failed: ", 0
 
 .code
-; Runs every test group, prints how many passed and failed, and exits
-; with the number of failures (0 = everything passed). build.bat reads it.
 testMain PROC
     INVOKE TPrint, ADDR headerMsg
 

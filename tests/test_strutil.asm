@@ -1,5 +1,3 @@
-; test_strutil.asm - tests for the string functions in StrUtil.asm.
-
 .data
 sHello      BYTE "HELLO", 0
 sHello2     BYTE "HELLO", 0
@@ -14,7 +12,6 @@ sMaxDword   BYTE "4294967295", 0
 buffer      BYTE 32 DUP(?)
 
 .code
-; StrLen, StrEqual, StrCopyN, StrToUpper, StrPadRight, StrFill and StrFromUInt.
 TestStrUtil PROC
     mSuite "StrUtil"
 

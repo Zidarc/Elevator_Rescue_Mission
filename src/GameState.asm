@@ -1,10 +1,4 @@
-; GameState.asm - every global variable of the game lives here
-; (building, elevator, energy, score, high scores, difficulty table).
-; main.asm includes this file first, so every other part can use them.
-
 .data
-; Difficulty table: one DiffSetting per level, indexed by difficulty
-;                 ttlMin ttlMax energy  mult  critical%
 difficultyTable DiffSetting <45, 75, 120, 1, 10>   ; Easy
                 DiffSetting <30, 60, 100, 2, 15>   ; Normal
                 DiffSetting <20, 40,  80, 3, 25>   ; Hard
@@ -40,13 +34,11 @@ roundOver           BYTE 0
 quitRequested       BYTE 0
 statusMsg           BYTE STATUS_SIZE DUP(0)
 
-; High scores (sorted, highest first)
+; High scores
 highScores          HighScore MAX_SCORES DUP(<>)
 highScoreCount      DWORD 0
 
 .code
-; Gives the address of the current difficulty's settings in ESI.
-; address = start of difficultyTable + difficulty * size of one entry (MUL)
 GetDiffSetting PROC USES eax edx
     mov  eax, difficulty
     mov  edx, SIZEOF DiffSetting
@@ -56,9 +48,6 @@ GetDiffSetting PROC USES eax edx
     ret
 GetDiffSetting ENDP
 
-; Gives the text "EASY", "NORMAL" or "HARD" for a level in EAX.
-; Every name takes 8 bytes, so address = diffNames + level * 8.
-; A wrong level gives "?".
 GetDiffName PROC USES ebx edx, level:DWORD
     mov  eax, OFFSET diffUnknown
     cmp  level, NUM_DIFFICULTIES
@@ -71,9 +60,6 @@ nameDone:
     ret
 GetDiffName ENDP
 
-; Starts a fresh game: energy from the difficulty, score, credits and
-; passengers to 0, round 1, elevator in the lobby.
-; Difficulty and high scores are kept.
 ResetGameState PROC USES eax esi
     call GetDiffSetting
     mov  eax, (DiffSetting PTR [esi]).startEnergy
@@ -95,6 +81,6 @@ ResetGameState PROC USES eax esi
     mov  roundNum, 1
     mov  roundOver, 0
     mov  quitRequested, 0
-    mov  statusMsg, 0                   ; empty message
+    mov  statusMsg, 0
     ret
 ResetGameState ENDP

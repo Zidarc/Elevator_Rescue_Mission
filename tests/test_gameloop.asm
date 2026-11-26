@@ -1,9 +1,6 @@
-; test_gameloop.asm - tests for CheckRoundOver and HandleCommand.
-
 WAITING_FLOOR = 4
 
 .code
-; Starting state: only floor 4 has people (2), elevator empty in the lobby, 100 energy.
 ResetLoopTestState PROC USES eax ecx esi
     mov  difficulty, DIFF_NORMAL
     mov  elevatorFloor, LOBBY
@@ -35,7 +32,6 @@ clearFloor:
     ret
 ResetLoopTestState ENDP
 
-; Removes the waiting people so nobody is left in the building.
 ClearWaitingFloor PROC USES eax esi
     mov  esi, OFFSET floors
     mov  eax, WAITING_FLOOR
@@ -44,7 +40,6 @@ ClearWaitingFloor PROC USES eax esi
     ret
 ClearWaitingFloor ENDP
 
-; People waiting or people on board: the round goes on.
 TestRoundStillPlaying PROC USES eax
     call ResetLoopTestState
     call CheckRoundOver
@@ -61,7 +56,6 @@ TestRoundStillPlaying PROC USES eax
     ret
 TestRoundStillPlaying ENDP
 
-; Nobody waiting and the elevator empty: the round ends.
 TestRoundAllCleared PROC USES eax
     call ResetLoopTestState
     call ClearWaitingFloor
@@ -72,7 +66,6 @@ TestRoundAllCleared PROC USES eax
     ret
 TestRoundAllCleared ENDP
 
-; Pressing Q ends the round.
 TestRoundQuit PROC USES eax
     call ResetLoopTestState
     mov  quitRequested, 1
@@ -81,7 +74,6 @@ TestRoundQuit PROC USES eax
     ret
 TestRoundQuit ENDP
 
-; Energy below 2 ends the round; passengers are saved in the lobby, lost anywhere else.
 TestRoundOutOfEnergy PROC USES eax
     call ResetLoopTestState
     mov  energy, 0
@@ -120,7 +112,6 @@ TestRoundOutOfEnergy PROC USES eax
     ret
 TestRoundOutOfEnergy ENDP
 
-; Each key does the right thing in small and capital letters; other keys are ignored.
 TestHandleCommand PROC USES eax
     call ResetLoopTestState
     INVOKE HandleCommand, 'w'
@@ -163,7 +154,6 @@ TestHandleCommand PROC USES eax
     ret
 TestHandleCommand ENDP
 
-; Runs all GameLoop tests.
 TestGameLoop PROC
     mSuite "GameLoop"
     call TestRoundStillPlaying

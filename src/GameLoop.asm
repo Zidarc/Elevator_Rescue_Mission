@@ -1,13 +1,10 @@
-; GameLoop.asm - runs the game: the real-time loop, the keys,
-; the sounds, checking when a round ends, and playing the 3 rounds.
-
 KEY_UP     = 'W'
 KEY_DOWN   = 'S'
 KEY_ACTION = 'A'
 KEY_SCAN   = 'X'
 KEY_SHOP   = 'B'
 KEY_QUIT   = 'Q'
-CASE_MASK  = 11011111b                  ; clears bit 5: lower -> upper case
+CASE_MASK  = 11011111b
 
 TONE_RESCUE = 880
 TONE_LOST   = 220
@@ -15,8 +12,6 @@ TONE_ROUND  = 660
 TONE_SHORT  = 60
 TONE_LONG   = 250
 
-; Beep is a Windows function that is not part of Irvine32. This one line
-; tells MASM its name and its two numbers (frequency, length in ms).
 Beep PROTO, dwFreq:DWORD, dwDuration:DWORD
 
 .data
@@ -26,7 +21,6 @@ heardRescued    DWORD 0
 heardLost       DWORD 0
 
 .code
-; Looks through floors 1-9. EAX = 1 if anyone is still waiting, else 0.
 AnyCiviliansWaiting PROC USES ecx esi
     mov  esi, OFFSET floors
     add  esi, SIZEOF FloorInfo          ; skip the lobby
@@ -46,12 +40,6 @@ foundWaiting:
     ret
 AnyCiviliansWaiting ENDP
 
-; Decides if the round is finished. It ends when:
-;   1. the player pressed Q
-;   2. energy is too low to move (below 2). If the elevator stopped in
-;      the lobby the passengers are saved, anywhere else they are lost.
-;   3. nobody is waiting on any floor and the elevator is empty
-; EAX = 1 if the round is over, 0 to keep playing.
 CheckRoundOver PROC USES ebx
     ; 1. quit
     cmp  quitRequested, 0
@@ -77,7 +65,7 @@ outOfEnergy:
     jz   reportOutOfEnergy
     cmp  elevatorFloor, LOBBY
     jne  passengersLost
-    call PerformAction                  ; at the lobby: deliver them
+    call PerformAction
     jmp  reportOutOfEnergy
 passengersLost:
     add  casualties, ebx
@@ -97,18 +85,13 @@ stillPlaying:
     ret
 CheckRoundOver ENDP
 
-; Takes one key and runs the matching action:
-;   W up   S down   A action   X scan   B shop   Q quit
-; Small letters are made capital first (AND clears bit 5),
-; so 'w' and 'W' do the same thing.
-; EAX = 1 if it was a game key, 0 if the key is ignored.
 HandleCommand PROC USES ebx, key:DWORD
     mov  ebx, key
     cmp  bl, 'a'
     jb   dispatchKey
     cmp  bl, 'z'
     ja   dispatchKey
-    and  bl, CASE_MASK                  ; 'a'..'z' -> 'A'..'Z'
+    and  bl, CASE_MASK                  ; to uppercase
 
 dispatchKey:
     cmp  bl, KEY_UP
@@ -144,7 +127,7 @@ cmdShop:
     jz   commandDone
     call ClearGameScreen
     call GetMseconds
-    mov  lastTickMs, eax                ; restart the clock: time in the shop is not counted
+    mov  lastTickMs, eax
     jmp  commandDone
 cmdQuit:
     mov  quitRequested, 1
@@ -153,9 +136,6 @@ commandDone:
     ret
 HandleCommand ENDP
 
-; Beeps when something happened since the last check:
-; a high beep when people were rescued, a low beep when people were lost.
-; Beep is a Win32 function: Beep(frequency in Hz, length in ms).
 PlayEventSounds PROC USES eax ecx edx
     mov  eax, rescuedNormal
     add  eax, rescuedCritical
@@ -173,17 +153,12 @@ soundsDone:
     ret
 PlayEventSounds ENDP
 
-; The real-time loop of one round. It never stops to wait for a key:
-;   - ReadKey checks if a key was pressed (ZF = 1 means no key)
-;   - GetMseconds gives the time in ms; every 1000 ms TickFloors runs
-;   - the screen is redrawn only when something changed
-; Loops until CheckRoundOver says the round is over.
 RunRound PROC USES eax ebx edx
     mov  heardRescued, 0
     mov  heardLost, 0
     call ClearGameScreen
     call GetMseconds
-    mov  lastTickMs, eax                ; start the 1 second clock
+    mov  lastTickMs, eax
     call CalcRoundScore
     call DrawGameState
 
@@ -197,13 +172,13 @@ frameLoop:
     jz   checkTimer                     ; no key waiting
     movzx eax, al
     INVOKE HandleCommand, eax
-    or   ebx, eax                       ; redraw if it was a command
+    or   ebx, eax
 
 checkTimer:
     call GetMseconds
     mov  edx, eax
     sub  eax, lastTickMs                ; ms since the last tick
-    jb   clockWrapped                   ; clock went back to 0 (after midnight)
+    jb   clockWrapped
     cmp  eax, TICK_MS
     jb   checkEnd
     add  lastTickMs, TICK_MS
@@ -212,7 +187,7 @@ checkTimer:
     jmp  checkEnd
 
 clockWrapped:
-    mov  lastTickMs, edx                ; start counting again from now
+    mov  lastTickMs, edx
 
 checkEnd:
     call CheckRoundOver
@@ -220,7 +195,7 @@ checkEnd:
     jnz  roundFinished
     test ebx, ebx
     jz   frameLoop
-    call PlayEventSounds                ; beep if someone was rescued or lost
+    call PlayEventSounds
     call CalcRoundScore
     call DrawGameState
     jmp  frameLoop
@@ -229,9 +204,6 @@ roundFinished:
     ret
 RunRound ENDP
 
-; One full game: choose difficulty, then play up to 3 rounds.
-; After each round the score is calculated and added to the total.
-; Q ends the game early. At the end: summary, then the high-score table.
 RunGame PROC USES eax ecx edx
     call Clrscr
     call SelectDifficulty
@@ -240,15 +212,15 @@ RunGame PROC USES eax ecx edx
 roundLoop:
     call InitializeGame
     call RunRound
-    INVOKE Beep, TONE_ROUND, TONE_LONG  ; round over sound
+    INVOKE Beep, TONE_ROUND, TONE_LONG
     call CalcRoundScore
-    add  totalScore, eax                ; add the round score to the total
+    add  totalScore, eax
     mov  eax, rescuedNormal
     add  eax, rescuedCritical
     add  totalRescued, eax
     mov  eax, casualties
     add  totalLost, eax
-    call ShowRoundOver                  ; show the round result, wait for a key
+    call ShowRoundOver
     cmp  quitRequested, 0
     jne  gameOver
     mov  eax, roundNum

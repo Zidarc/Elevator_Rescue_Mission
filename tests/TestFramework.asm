@@ -1,8 +1,3 @@
-; TestFramework.asm - our small testing tool written in assembly.
-; Counts passed and failed checks and prints PASS / FAIL lines.
-; It prints with WriteFile instead of WriteString so the output still
-; shows when it is redirected to a file.
-
 .data
 testsPassed DWORD 0
 testsFailed DWORD 0
@@ -18,7 +13,6 @@ newLine     BYTE 0Dh, 0Ah, 0
 testNumBuffer   BYTE 12 DUP(0)
 
 .code
-; Prints a string to the standard output.
 TPrint PROC USES eax ecx edx, pStr:PTR BYTE
     cmp  stdOutHandle, 0
     jne  haveHandle
@@ -30,7 +24,6 @@ haveHandle:
     ret
 TPrint ENDP
 
-; Prints a signed number (dividing by 10 to get each digit).
 TPrintInt PROC USES eax ebx ecx edx edi, value:SDWORD
     mov  edi, OFFSET testNumBuffer + (SIZEOF testNumBuffer - 1)
     mov  BYTE PTR [edi], 0              ; terminator
@@ -58,8 +51,6 @@ printIt:
     ret
 TPrintInt ENDP
 
-; The main check: compares the actual value with the expected one,
-; prints PASS or FAIL with the description and updates the counters.
 AssertEq PROC USES eax, actual:DWORD, expected:DWORD, pDesc:PTR BYTE
     mov  eax, actual
     cmp  eax, expected
@@ -85,7 +76,7 @@ printDesc:
     mov  eax, actual
     cmp  eax, expected
     je   finished
-    INVOKE TPrint, ADDR expectedTag     ; show both values on failure
+    INVOKE TPrint, ADDR expectedTag
     INVOKE TPrintInt, expected
     INVOKE TPrint, ADDR gotTag
     INVOKE TPrintInt, actual
@@ -95,7 +86,6 @@ finished:
     ret
 AssertEq ENDP
 
-; Prints the name of a group of tests, like "== Scoreboard".
 PrintSuite PROC USES eax, pName:PTR BYTE
     mov  eax, yellow + (black * 16)
     call SetTextColor

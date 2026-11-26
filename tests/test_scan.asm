@@ -1,15 +1,7 @@
-; test_scan.asm - tests for the recursive scan.
-; Test building used by every test (5 people waiting in total):
-;   floor 2  normal,   3 people
-;   floor 5  critical, 2 people
-;   floor 7  expired   (people lost, must not be counted)
-;   floor 8  energy pack
-
 FIXTURE_TOTAL = 5
 MIDDLE_FLOOR  = 5
 
 .code
-; ESI = address of floor number EAX.
 FloorPtr PROC USES eax edx
     mov  edx, SIZEOF FloorInfo
     mul  edx
@@ -18,7 +10,6 @@ FloorPtr PROC USES eax edx
     ret
 FloorPtr ENDP
 
-; Clears the building and builds the test building described above.
 ResetScanTestState PROC USES eax ecx esi
     mov  difficulty, DIFF_NORMAL
     mov  elevatorFloor, LOBBY
@@ -54,7 +45,6 @@ clearFloor:
     ret
 ResetScanTestState ENDP
 
-; EAX = how many floors are marked as scanned.
 CountScannedFloors PROC USES ecx esi
     xor  eax, eax
     mov  esi, OFFSET floors
@@ -69,7 +59,6 @@ notScanned:
     ret
 CountScannedFloors ENDP
 
-; The scan finds the same 5 people from any starting floor.
 TestScanTotals PROC USES eax
     call ResetScanTestState
     mov  elevatorFloor, LOBBY
@@ -88,7 +77,6 @@ TestScanTotals PROC USES eax
     ret
 TestScanTotals ENDP
 
-; Every floor gets revealed and the scan costs 5 energy once.
 TestScanFlagsAndCost PROC USES eax
     call ResetScanTestState
     mov  elevatorFloor, MIDDLE_FLOOR
@@ -98,7 +86,6 @@ TestScanFlagsAndCost PROC USES eax
     mAssertEq eax, NUM_FLOORS, "scan sets FLAG_SCANNED on all 10 floors"
     mAssertEq energy, 100 - SCAN_COST, "scan costs SCAN_COST energy"
 
-    ; flags that were already there survive the scan
     mov  eax, 5
     call FloorPtr
     movzx eax, (FloorInfo PTR [esi]).floorFlags
@@ -107,7 +94,6 @@ TestScanFlagsAndCost PROC USES eax
     ret
 TestScanFlagsAndCost ENDP
 
-; With less than 5 energy the scan is refused and reveals nothing.
 TestScanNoEnergy PROC USES eax
     call ResetScanTestState
     mov  energy, SCAN_COST - 1
@@ -125,8 +111,6 @@ TestScanNoEnergy PROC USES eax
     ret
 TestScanNoEnergy ENDP
 
-; Calls the recursive function directly and checks that ESP and the registers
-; are the same afterwards, so the stack is balanced after the recursion.
 TestScanRecursiveDirect PROC USES eax ebx ecx edx esi edi
     call ResetScanTestState
 
@@ -150,14 +134,13 @@ TestScanRecursiveDirect PROC USES eax ebx ecx edx esi edi
     call ScanFloorsRecursive
     mAssertEq eax, 0, "recursive scan above the top returns 0"
 
-    ; ESP and the preserved registers are unchanged
     mov  ebx, 11111111h
     mov  ecx, 22222222h
     mov  esi, 33333333h
     mov  edi, esp                       ; ESP before
     push 1
     push LOBBY
-    call ScanFloorsRecursive            ; deepest recursion: 11 levels
+    call ScanFloorsRecursive
     mov  edx, esp
     mAssertEq edx, edi, "ESP is the same after the recursive call"
     mAssertEq ebx, 11111111h, "EBX preserved by the recursion"
@@ -166,13 +149,12 @@ TestScanRecursiveDirect PROC USES eax ebx ecx edx esi edi
     ret
 TestScanRecursiveDirect ENDP
 
-; Runs all Scan tests.
 TestScan PROC
     mSuite "Scan"
     call TestScanTotals
     call TestScanFlagsAndCost
     call TestScanNoEnergy
     call TestScanRecursiveDirect
-    call ResetScanTestState             ; leave a clean building behind
+    call ResetScanTestState
     ret
 TestScan ENDP

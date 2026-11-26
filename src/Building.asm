@@ -1,8 +1,4 @@
-; Building.asm - makes a new random building at the start of every round.
-; Decides for each floor whether it has normal people, critical people,
-; an energy pack or nothing, and how many seconds (TTL) the people have.
-
-PERCENT_RANGE = 100                     ; RandomRange limit for % rolls
+PERCENT_RANGE = 100
 
 .data
 diffMenu    BYTE "  =========================================", 0Dh, 0Ah
@@ -14,7 +10,6 @@ diffMenu    BYTE "  =========================================", 0Dh, 0Ah
             BYTE "  Select a level: ", 0
 
 .code
-; Shows the Easy / Normal / Hard menu and saves the choice in "difficulty".
 SelectDifficulty PROC USES eax edx
 selectLoop:
     call Clrscr
@@ -42,12 +37,6 @@ selectDone:
     ret
 SelectDifficulty ENDP
 
-; Randomly decides what a floor will be. Rolls a number 0-99:
-;   below criticalPct            -> critical floor
-;   next 20                      -> energy pack
-;   next 15                      -> empty
-;   the rest                     -> normal floor
-; criticalPct comes from the difficulty, so Hard has more critical floors.
 RollFloorType PROC USES ebx esi
     call GetDiffSetting                 ; ESI = current DiffSetting
     mov  ebx, (DiffSetting PTR [esi]).criticalPct   ; EBX = running limit
@@ -77,7 +66,6 @@ rollDone:
     ret
 RollFloorType ENDP
 
-; Random number of seconds between ttlMin and ttlMax of the difficulty.
 RandomBaseTtl PROC USES esi
     call GetDiffSetting                 ; ESI = current DiffSetting
     mov  eax, (DiffSetting PTR [esi]).ttlMax
@@ -88,8 +76,6 @@ RandomBaseTtl PROC USES esi
     ret
 RandomBaseTtl ENDP
 
-; Makes later rounds harder: takes 5 seconds off the TTL for every round
-; after the first, but never goes below MIN_TTL (10 seconds).
 ApplyRoundPenalty PROC USES ebx ecx edx
     mov  ebx, eax                       ; EBX = TTL
     mov  eax, roundNum
@@ -97,7 +83,7 @@ ApplyRoundPenalty PROC USES ebx ecx edx
     mov  ecx, ROUND_TTL_STEP
     mul  ecx                            ; EAX = penalty in seconds
     cmp  ebx, eax
-    jbe  useMinimum                     ; penalty eats the whole TTL
+    jbe  useMinimum
     sub  ebx, eax
     cmp  ebx, MIN_TTL
     jae  penaltyDone
@@ -108,12 +94,6 @@ penaltyDone:
     ret
 ApplyRoundPenalty ENDP
 
-; Fills one floor of the building with random contents.
-;   normal:   1-4 people, random TTL
-;   critical: 1-2 people, half the TTL (SHR 1 = divide by 2)
-;   energy:   an energy pack, no timer
-;   empty:    nothing
-; The lobby (floor 0) is always empty.
 GenerateFloor PROC USES eax ebx ecx edx esi edi, floorIndex:DWORD
     mov  eax, floorIndex
     mov  ecx, SIZEOF FloorInfo
@@ -127,7 +107,7 @@ GenerateFloor PROC USES eax ebx ecx edx esi edi, floorIndex:DWORD
     mov  (FloorInfo PTR [edi]).ttlStart, 0
 
     cmp  floorIndex, LOBBY
-    je   generateDone                   ; the lobby never holds anything
+    je   generateDone
 
     call RollFloorType
     cmp  eax, FT_NORMAL
@@ -154,7 +134,7 @@ criticalFloor:
     mov  (FloorInfo PTR [edi]).civilians, al
     mov  (FloorInfo PTR [edi]).floorFlags, FLAG_CIVILIANS OR FLAG_CRITICAL
     call RandomBaseTtl
-    shr  eax, 1                         ; critical floors get half the time
+    shr  eax, 1                         ; half TTL
     jmp  storeTtl
 
 energyFloor:
@@ -170,10 +150,6 @@ generateDone:
     ret
 GenerateFloor ENDP
 
-; Builds a new building for the round: generates all 10 floors, puts the
-; elevator back in the lobby and clears this round's counters.
-; From round 2 the player also gets +40 energy (max 150).
-; Credits, capacity and total score carry over between rounds.
 InitializeGame PROC USES eax ecx
     xor  ecx, ecx                       ; ECX = floor index
 buildLoop:
@@ -193,10 +169,10 @@ buildDone:
     mov  passengersNormal, eax
     mov  passengersCritical, eax
     mov  roundOver, 0
-    mov  statusMsg, 0                   ; empty message line for the new round
+    mov  statusMsg, 0
 
     cmp  roundNum, 1
-    jbe  initDone                       ; round 1 keeps the starting energy
+    jbe  initDone
     mov  eax, energy
     add  eax, ROUND_ENERGY_REFILL
     cmp  eax, MAX_ENERGY

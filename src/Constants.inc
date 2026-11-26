@@ -1,22 +1,17 @@
-; Constants.inc - every fixed number of the game (floors, costs, points)
-; and the structures (STRUCT) used for floors, difficulty levels and scores.
-; main.asm includes this file first, so every part of the game can use it.
-
 ; Building
 NUM_FLOORS        = 10              ; floor 0 = lobby, floors 1..9
 LOBBY             = 0
 TOP_FLOOR         = NUM_FLOORS - 1
 MAX_ROUNDS        = 3
 
-; Floor flags: every floor has one BYTE where each bit means something.
-; Checked with TEST, set with OR, cleared with AND NOT.
+; Floor flags
 FLAG_CIVILIANS    = 00000001b       ; civilians are waiting
-FLAG_CRITICAL     = 00000010b       ; civilians are critical (bonus, short TTL)
+FLAG_CRITICAL     = 00000010b       ; critical civilians
 FLAG_ENERGY       = 00000100b       ; energy pack on this floor
 FLAG_EXPIRED      = 00001000b       ; TTL ran out, civilians lost
-FLAG_SCANNED      = 00010000b       ; contents revealed (scanned or visited)
+FLAG_SCANNED      = 00010000b       ; floor revealed
 
-; Floor types returned by RollFloorType
+; Floor types
 FT_EMPTY          = 0
 FT_NORMAL         = 1
 FT_CRITICAL       = 2
@@ -24,13 +19,11 @@ FT_ENERGY         = 3
 
 ENERGY_FLOOR_PCT  = 20              ; % chance a floor holds an energy pack
 EMPTY_FLOOR_PCT   = 15              ; % chance a floor is empty
-                                    ; critical % comes from the difficulty table,
-                                    ; the rest are normal floors
 NORMAL_CIV_MIN    = 1
 NORMAL_CIV_MAX    = 4
 CRITICAL_CIV_MIN  = 1
 CRITICAL_CIV_MAX  = 2
-ROUND_TTL_STEP    = 5               ; TTL shrinks by 5 s per extra round
+ROUND_TTL_STEP    = 5               ; TTL lost per round
 MIN_TTL           = 10
 
 ; Elevator, energy and shop
@@ -38,7 +31,7 @@ MOVE_COST         = 2               ; energy per floor moved
 SCAN_COST         = 5               ; energy per scan
 ENERGY_PACK       = 25              ; energy gained from a pack
 MAX_ENERGY        = 150
-ROUND_ENERGY_REFILL = 40            ; energy added at the start of rounds 2 and 3
+ROUND_ENERGY_REFILL = 40            ; energy added each new round
 START_CAPACITY    = 4
 MAX_CAPACITY      = 10
 
@@ -53,7 +46,7 @@ SHOP_ITEM_ENERGY    = 2
 SHOP_ITEM_FREEZE    = 3
 
 ; Scoring
-NORMAL_POINTS     = 100             ; per normal civilian delivered to lobby
+NORMAL_POINTS     = 100             ; per normal civilian
 CRITICAL_POINTS   = 300             ; per critical civilian delivered
 CASUALTY_PENALTY  = 50              ; per civilian lost
 ENERGY_BONUS      = 2               ; per energy point left at round end
@@ -62,7 +55,7 @@ CRITICAL_CREDITS  = 25
 
 ; Timing and difficulty
 TICK_MS           = 1000            ; one TTL tick per second
-FRAME_DELAY_MS    = 30              ; input polling delay in the game loop
+FRAME_DELAY_MS    = 30              ; game loop delay
 
 DIFF_EASY         = 0
 DIFF_NORMAL       = 1
@@ -76,13 +69,13 @@ NAME_SIZE         = 16              ; 15 characters + null terminator
 MAX_SCORES        = 10
 STATUS_SIZE       = 64
 
-; Structures (like a struct in C). Field names are all different on purpose.
+; Structures
 FloorInfo STRUCT
     civilians   BYTE 0              ; people waiting on this floor
     floorFlags  BYTE 0              ; FLAG_* bits
-    ttlLeft     WORD 0              ; seconds left before they are lost
-    ttlStart    WORD 0              ; starting TTL (for the colour thresholds)
-    floorPad    WORD 0              ; keeps the structure 8 bytes
+    ttlLeft     WORD 0              ; seconds left
+    ttlStart    WORD 0              ; starting TTL
+    floorPad    WORD 0              ; padding
 FloorInfo ENDS
 
 DiffSetting STRUCT
@@ -98,5 +91,5 @@ HighScore STRUCT
     points      DWORD 0
     level       BYTE 0              ; DIFF_EASY / DIFF_NORMAL / DIFF_HARD
     roundsDone  BYTE 0
-    scorePad    WORD 0              ; keeps the structure 24 bytes
+    scorePad    WORD 0              ; padding
 HighScore ENDS

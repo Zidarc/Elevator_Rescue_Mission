@@ -1,9 +1,4 @@
-; test_building.asm - tests for Building.asm.
-; Random functions are called many times and every result is checked
-; to be inside the allowed range (we can not test exact random values).
-; SelectDifficulty needs the keyboard, so it is tested by hand.
-
-TEST_FLOOR   = 3                        ; any floor 1..TOP_FLOOR
+TEST_FLOOR   = 3
 ROLL_COUNT   = 1000
 FLOOR_COUNT  = 800
 TTL_COUNT    = 500
@@ -16,7 +11,6 @@ bldBadEnergy    DWORD 0
 bldBadEmpty     DWORD 0
 
 .code
-; 1000 rolls: every result is a valid floor type and all four types appear.
 TestRollFloorType PROC USES eax ebx ecx edx
     mov  difficulty, DIFF_NORMAL
     xor  ebx, ebx                       ; EBX = results out of range
@@ -39,7 +33,6 @@ rollNext:
     ret
 TestRollFloorType ENDP
 
-; 800 random floors: each one has the right flags, people count and TTL range for its type.
 TestFloorContents PROC USES eax ebx ecx edx esi
     mov  difficulty, DIFF_NORMAL
     mov  roundNum, 1
@@ -75,7 +68,7 @@ floorLoop:
 
 checkNormal:
     or   bldSeenMask, 0001b
-    cmp  eax, FLAG_CIVILIANS            ; exactly this flag, nothing else
+    cmp  eax, FLAG_CIVILIANS
     jne  normalBad
     cmp  ebx, NORMAL_CIV_MIN
     jb   normalBad
@@ -117,7 +110,7 @@ checkEnergy:
     or   bldSeenMask, 0100b
     cmp  eax, FLAG_ENERGY
     jne  energyBad
-    or   ebx, edx                       ; civilians and TTL must both be 0
+    or   ebx, edx
     jnz  energyBad
     jmp  floorNext
 energyBad:
@@ -135,7 +128,6 @@ floorNext:
     ret
 TestFloorContents ENDP
 
-; Makes many floors and counts how many have a TTL outside lowTtl..highTtl. EAX = count.
 CountTtlOutOfRange PROC USES ebx ecx esi, lowTtl:DWORD, highTtl:DWORD
     mov  esi, OFFSET floors
     add  esi, TEST_FLOOR * SIZEOF FloorInfo
@@ -159,7 +151,6 @@ countNext:
     ret
 CountTtlOutOfRange ENDP
 
-; TTL ranges for each difficulty, the round penalty and the 10 second minimum.
 TestTtlRules PROC USES eax
     ; Easy, round 1: normal 45..75, critical 22..37 -> 22..75
     mov  difficulty, DIFF_EASY
@@ -179,12 +170,11 @@ TestTtlRules PROC USES eax
     INVOKE CountTtlOutOfRange, MIN_TTL, 40 - ROUND_TTL_STEP * (MAX_ROUNDS - 1)
     mAssertEq eax, 0, "Hard round 3: TTL never below MIN_TTL and never above 30"
 
-    mov  difficulty, DIFF_NORMAL        ; leave the globals as found
+    mov  difficulty, DIFF_NORMAL
     mov  roundNum, 1
     ret
 TestTtlRules ENDP
 
-; The lobby is always generated empty.
 TestLobbyEmpty PROC USES eax ebx ecx
     mov  difficulty, DIFF_NORMAL
     mov  roundNum, 1
@@ -205,7 +195,6 @@ lobbyNext:
     ret
 TestLobbyEmpty ENDP
 
-; A new round resets the counters and adds the energy refill from round 2.
 TestInitializeGame PROC USES eax ebx ecx esi
     mov  difficulty, DIFF_NORMAL
     mov  roundNum, 1
@@ -273,12 +262,11 @@ checkNext:
     call InitializeGame                 ; energy was 140, refill would reach 180
     mAssertEq energy, MAX_ENERGY, "round 3 energy is capped at MAX_ENERGY"
 
-    mov  roundNum, 1                    ; leave the globals as found
+    mov  roundNum, 1
     mov  difficulty, DIFF_NORMAL
     ret
 TestInitializeGame ENDP
 
-; Runs all Building tests.
 TestBuilding PROC
     mSuite "Building"
     call TestRollFloorType

@@ -1,10 +1,7 @@
-; test_score.asm - tests for the round score and the shop.
-
 SHOP_FLOOR_A = 3
 SHOP_FLOOR_B = 6
 
 .code
-; Puts every variable back to a known starting state before each test.
 ResetScoreTestState PROC USES ecx esi
     mov  difficulty, DIFF_NORMAL
     mov  elevatorFloor, LOBBY
@@ -30,7 +27,6 @@ clearFloors:
     ret
 ResetScoreTestState ENDP
 
-; The README example gives 2660, each multiplier works, and the score never goes below 0.
 TestRoundScore PROC USES eax
     call ResetScoreTestState
     mov  rescuedNormal, 8
@@ -77,7 +73,6 @@ TestRoundScore PROC USES eax
     ret
 TestRoundScore ENDP
 
-; Capacity upgrade: bought, not enough credits, already at maximum.
 TestShopCapacity PROC USES eax
     call ResetScoreTestState
     mov  credits, SHOP_CAPACITY_COST
@@ -108,7 +103,6 @@ TestShopCapacity PROC USES eax
     ret
 TestShopCapacity ENDP
 
-; Energy refill: bought, capped at 150, already full, no credits.
 TestShopEnergy PROC USES eax
     call ResetScoreTestState
     mov  energy, 50
@@ -140,7 +134,6 @@ TestShopEnergy PROC USES eax
     ret
 TestShopEnergy ENDP
 
-; Time freeze adds 10 seconds only to floors with people waiting.
 TestShopFreeze PROC USES eax
     call ResetScoreTestState
     mov  floors[SHOP_FLOOR_A * SIZEOF FloorInfo].civilians, 2
@@ -170,7 +163,6 @@ TestShopFreeze PROC USES eax
     ret
 TestShopFreeze ENDP
 
-; Nothing is sold outside the lobby, and items 0 and 4 do not exist.
 TestShopRefusals PROC USES eax
     call ResetScoreTestState
     mov  elevatorFloor, SHOP_FLOOR_A
@@ -197,7 +189,6 @@ TestShopRefusals PROC USES eax
     ret
 TestShopRefusals ENDP
 
-; Runs all Score and Shop tests.
 TestScore PROC
     mSuite "Score and Shop"
     call TestRoundScore

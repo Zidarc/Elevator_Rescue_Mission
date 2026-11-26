@@ -1,11 +1,8 @@
-; test_render.asm - tests for the timer colours.
-
 TTL_GREEN  = lightGreen + (black * 16)
 TTL_YELLOW = yellow + (black * 16)
 TTL_RED    = lightRed + (black * 16)
 
 .code
-; GetTtlColor gives green above 50%, yellow from 25% to 50% and red below 25%.
 TestRender PROC USES eax
     mSuite "Render"
     INVOKE GetTtlColor, 40, 40
