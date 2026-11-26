@@ -1,105 +1,68 @@
 @echo off
-rem  build.bat - builds Elevator Rescue Simulator with MASM + Irvine32
+rem build.bat - builds and runs Elevator Rescue Simulator.
 rem
-rem  Usage:   build.bat            build the game  (build\ElevatorRescue.exe)
-rem           build.bat run        build and run the game
-rem           build.bat test       build and run the tests (build\RunTests.exe)
-rem           build.bat clean      delete the build folder
+rem   build.bat         build the game   (build\ElevatorRescue.exe)
+rem   build.bat run     build, then play the game
+rem   build.bat test    build and run the tests
+rem   build.bat clean   delete the build folder
 rem
-rem  Needs:   Visual Studio with "Desktop development with C++"
-rem           Irvine32 library in C:\Irvine  (or set IRVINE_DIR first)
-setlocal EnableDelayedExpansion
+rem Needs Visual Studio ("Desktop development with C++") for MASM, and the
+rem Irvine32 library in C:\Irvine or C:\Irvine32-master (or set IRVINE_DIR).
+setlocal
 
 set "ROOT=%~dp0"
 set "BUILD=%ROOT%build"
-set "IRVINE=C:\Irvine"
-if defined IRVINE_DIR set "IRVINE=%IRVINE_DIR%"
 set "TARGET=%~1"
 if "%TARGET%"=="" set "TARGET=game"
 
-if /I "%TARGET%"=="clean" goto clean
-if /I "%TARGET%"=="game"  goto setup
-if /I "%TARGET%"=="run"   goto setup
-if /I "%TARGET%"=="test"  goto setup
-echo Unknown target "%TARGET%". Use: game, run, test or clean.
-exit /b 1
+if /I "%TARGET%"=="clean" (
+    if exist "%BUILD%" rmdir /s /q "%BUILD%"
+    echo Cleaned.
+    exit /b 0
+)
 
-:clean
-if exist "%BUILD%" rmdir /s /q "%BUILD%"
-echo Cleaned.
-exit /b 0
-
-rem  Find MASM (ml.exe). If it is not on PATH, load the 32-bit
-rem  Visual Studio environment with vcvars32.bat (located via vswhere).
-:setup
-if not exist "%IRVINE%\Irvine32.inc" (
-    echo ERROR: Irvine32 not found in "%IRVINE%". Install it or set IRVINE_DIR.
+rem Find the Irvine32 library
+if not defined IRVINE_DIR set "IRVINE_DIR=C:\Irvine"
+if not exist "%IRVINE_DIR%\Irvine32.inc" if exist "C:\Irvine32-master\Irvine32.inc" set "IRVINE_DIR=C:\Irvine32-master"
+if not exist "%IRVINE_DIR%\Irvine32.inc" (
+    echo ERROR: Irvine32 not found. Put it in C:\Irvine or set IRVINE_DIR.
     exit /b 1
 )
+
+rem Find MASM (ml.exe). If it is not ready, load Visual Studio's 32-bit tools.
 where ml.exe >nul 2>nul
 if not errorlevel 1 goto build
-
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
-if not exist "%VSWHERE%" goto noVS
 set "VSDIR="
-for /f "usebackq delims=" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSDIR=%%i"
-if not defined VSDIR goto noVS
-call "%VSDIR%\VC\Auxiliary\Build\vcvars32.bat" >nul 2>nul
+if exist "%VSWHERE%" for /f "usebackq delims=" %%i in (`"%VSWHERE%" -latest -products * -property installationPath`) do set "VSDIR=%%i"
+if defined VSDIR call "%VSDIR%\VC\Auxiliary\Build\vcvars32.bat" >nul 2>nul
 where ml.exe >nul 2>nul
-if errorlevel 1 goto noVS
-goto build
-
-:noVS
-echo ERROR: MASM (ml.exe) not found. Install Visual Studio with
-echo        "Desktop development with C++", or run this from a
-echo        "Developer Command Prompt for VS" (x86).
-exit /b 1
-
-rem  Assemble and link
-:build
-if not exist "%BUILD%" mkdir "%BUILD%"
-if not exist "%BUILD%\src"   mkdir "%BUILD%\src"
-if not exist "%BUILD%\tests" mkdir "%BUILD%\tests"
-
-set "MLFLAGS=/nologo /c /coff /Zi /W3 /I "%IRVINE%" /I "%ROOT%include" /I "%ROOT%tests""
-set "LINKFLAGS=/nologo /SUBSYSTEM:CONSOLE /DEBUG /SAFESEH:NO /LIBPATH:"%IRVINE%""
-set "LIBS=Irvine32.lib kernel32.lib user32.lib"
-
-rem Game modules (every src\*.asm)
-set "SRC_OBJS="
-set "GAME_OBJS="
-for %%f in ("%ROOT%src\*.asm") do (
-    ml %MLFLAGS% /Fo"%BUILD%\src\%%~nf.obj" "%%f"
-    if errorlevel 1 goto failed
-    set "GAME_OBJS=!GAME_OBJS! "%BUILD%\src\%%~nf.obj""
-    if /I not "%%~nf"=="main" set "SRC_OBJS=!SRC_OBJS! "%BUILD%\src\%%~nf.obj""
+if errorlevel 1 (
+    echo ERROR: MASM ml.exe not found. Install Visual Studio with "Desktop development with C++".
+    exit /b 1
 )
 
-if /I "%TARGET%"=="test" goto buildTests
+:build
+if not exist "%BUILD%" mkdir "%BUILD%"
+set ASSEMBLE=ml /nologo /c /coff /Zi /W3 /I "%IRVINE_DIR%" /I "%ROOT%src" /I "%ROOT%tests"
+set LINKER=link /nologo /SUBSYSTEM:CONSOLE /DEBUG /SAFESEH:NO /LIBPATH:"%IRVINE_DIR%"
+set LIBS=Irvine32.lib kernel32.lib user32.lib
 
-link %LINKFLAGS% /OUT:"%BUILD%\ElevatorRescue.exe" %GAME_OBJS% %LIBS%
-if errorlevel 1 goto failed
-echo.
+if /I "%TARGET%"=="test" goto tests
+
+rem The game: main.asm includes every other part, so it is the only file to assemble
+%ASSEMBLE% /Fo"%BUILD%\main.obj" "%ROOT%src\main.asm" || goto failed
+%LINKER% /OUT:"%BUILD%\ElevatorRescue.exe" "%BUILD%\main.obj" %LIBS% || goto failed
 echo Built build\ElevatorRescue.exe
 if /I not "%TARGET%"=="run" exit /b 0
-
-rem Run from the project root so the game finds data\
 pushd "%ROOT%"
 "%BUILD%\ElevatorRescue.exe"
 popd
 exit /b 0
 
-:buildTests
-rem Test runner = every src module except main.asm + every tests\*.asm
-set "TEST_OBJS="
-for %%f in ("%ROOT%tests\*.asm") do (
-    ml %MLFLAGS% /Fo"%BUILD%\tests\%%~nf.obj" "%%f"
-    if errorlevel 1 goto failed
-    set "TEST_OBJS=!TEST_OBJS! "%BUILD%\tests\%%~nf.obj""
-)
-link %LINKFLAGS% /OUT:"%BUILD%\RunTests.exe" %SRC_OBJS% %TEST_OBJS% %LIBS%
-if errorlevel 1 goto failed
-
+:tests
+%ASSEMBLE% /Fo"%BUILD%\TestMain.obj" "%ROOT%tests\TestMain.asm" || goto failed
+%LINKER% /OUT:"%BUILD%\RunTests.exe" "%BUILD%\TestMain.obj" %LIBS% || goto failed
 pushd "%ROOT%"
 "%BUILD%\RunTests.exe"
 set "RESULT=%ERRORLEVEL%"

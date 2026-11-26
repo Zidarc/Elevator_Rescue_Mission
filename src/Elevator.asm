@@ -3,8 +3,6 @@
 ; counting down every second.
 ; This file never prints. It writes a message into statusMsg and
 ; Render.asm shows it on the screen.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 .data
 msgMoveUp       BYTE "Moved up.", 0
@@ -299,5 +297,3 @@ tickNext:
 
     ret
 TickFloors ENDP
-
-END

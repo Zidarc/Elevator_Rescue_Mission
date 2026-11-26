@@ -96,7 +96,7 @@ The project is based on the proposal document [Resources/Elevator Rescue Mission
 | Turn-based input | **Real-time** loop: `ReadKey` polls without blocking, `GetMseconds` ticks the timers every second |
 | Floor state in several separate variables | One **bit-flag byte** per floor (`FLAG_CIVILIANS`, `FLAG_CRITICAL`, `FLAG_ENERGY`, …) |
 | Manual testing only | An **automated test runner** written in assembly (`build.bat test`) |
-| One large source file | **Multi-module** program: one `.asm` per feature, shared `Elevator.inc` with `EXTERNDEF` and `PROTO` |
+| One large source file | One `.asm` file per feature, joined into one program with `INCLUDE` in `main.asm` |
 
 ---
 
@@ -139,7 +139,7 @@ Everything stays in MASM with Irvine32, as the proposal describes.
 
 | Concept | Where |
 |---------|-------|
-| **Data definition**: `BYTE`, `WORD`, `DWORD`, `DUP`, strings, symbolic constants (`=`, `EQU`) | `Elevator.inc`, every `.data` section |
+| **Data definition**: `BYTE`, `WORD`, `DWORD`, `DUP`, strings, symbolic constants (`=`, `EQU`) | `Constants.inc`, every `.data` section |
 | **STRUCT** | `FloorInfo`, `DiffSetting`, `HighScore` |
 | **Array of structures** + base-index-scale addressing | `floors[esi + ecx * SIZEOF FloorInfo]`, `highScores` |
 | **OFFSET, PTR, TYPE, SIZEOF, LENGTHOF** | Table indexing, buffer sizes |
@@ -149,17 +149,17 @@ Everything stays in MASM with Irvine32, as the proposal describes.
 | **Shifts**: `SHL`, `SHR` | Critical TTL = TTL `SHR 1`, quick multiply / divide by 2 |
 | **MUL / DIV** | Scoring, difficulty multiplier, table indexing, percentage rolls |
 | **Stack**: `PUSH`, `POP`, `PUSHAD`, `POPAD` | Saving registers, passing parameters |
-| **Procedures**: `PROC`, `USES`, `PROTO`, `INVOKE`, `ADDR` | Every module |
+| **Procedures**: `PROC`, `USES`, `INVOKE`, `ADDR` | Every file |
 | **Explicit stack frames**: `EBP`-based parameters, `RET n` | `ScanFloorsRecursive` |
 | **Recursion** | `ScanFloorsRecursive` walks up and down the building |
-| **String primitives**: `MOVSB`, `CMPSB`, `SCASB`, `STOSB`, `LODSB` with `REP` / `REPE` / `REPNE` | `StrUtil.asm`; `Scoreboard.asm` (`STD` + `REP MOVSB` shifts whole records, `REP STOSB` clears them) |
+| **String primitives**: `MOVSB`, `CMPSB`, `SCASB`, `STOSB`, `LODSB` with `REP` / `REPE` / `REPNE` | `StrUtil.asm`; `Scoreboard.asm` (`REP STOSB` clears the table) |
 | **Macros** with `LOCAL` labels | Test framework (`mAssertEq`, `mSuite`) |
 | **Conditional assembly**: `IFNDEF` | Include guards |
-| **Multi-module programs**: `EXTERNDEF`, `PROTO`, separate assembly and linking | `src/*.asm` + `include/Elevator.inc` |
+| **Splitting a program into files**: `INCLUDE` | `main.asm` includes `Constants.inc` and every `src/*.asm` file |
 | **Irvine32**: `ReadKey`, `ReadChar`, `ReadString`, `Gotoxy`, `SetTextColor`, `Clrscr`, `Delay`, `GetMseconds`, `Randomize`, `RandomRange`, `WriteDec` | Input, rendering, timing, randomness |
 | **Win32 API**: `SetConsoleTitle`, `GetStdHandle`, `WriteFile`, `SetConsoleCursorInfo` | Console setup, test output |
 | **File I/O**: `CreateOutputFile`, `WriteToFile`, `OpenInputFile`, `ReadFromFile`, `CloseFile` | High-score file |
-| **Insertion sort with array shifting** | Inserting a new score into the sorted table |
+| **Bubble sort** on an array of structures | Sorting the high-score table (`SortScores`) |
 
 ---
 
@@ -169,13 +169,13 @@ How each topic from the course textbook (Kip Irvine, *Assembly Language for x86 
 
 | Ch. | Topic | Used? | Where |
 |-----|-------|-------|-------|
-| 3 | Assembly fundamentals: data types, constants, strings, `DUP` | ✅ | `Elevator.inc`, all `.data` sections |
+| 3 | Assembly fundamentals: data types, constants, strings, `DUP` | ✅ | `Constants.inc`, all `.data` sections |
 | 4 | Data transfer, addressing modes, `OFFSET` / `PTR` / `TYPE` / `LENGTHOF` / `SIZEOF`, `JMP`, `LOOP` | ✅ | Indexed access to `floors`, `highScores`, `difficultyTable` |
 | 5 | Procedures, the runtime stack, `PUSH` / `POP`, `USES`, the Irvine32 library | ✅ | Every module |
 | 6 | Boolean instructions (`AND`, `OR`, `XOR`, `NOT`, `TEST`), `CMP`, conditional jumps, conditional loops, finite-state machines | ✅ | Floor flags, every decision, the input dispatcher. `.IF` directives deliberately **not** used, so every branch is a visible `CMP` + `Jcc` |
 | 7 | Shift and rotate, `MUL` / `IMUL` / `DIV` / `IDIV` | ✅ / ❌ | Shifts and `MUL` / `DIV` for scoring and timers. Extended-precision (`ADC` / `SBB`) and BCD arithmetic: scores fit in 32 bits, so not needed |
-| 8 | Stack frames, stack parameters, `LOCAL`, recursion, `INVOKE` / `PROTO`, multi-module programs | ✅ | `ScanFloorsRecursive` (manual `EBP` frame, `RET 8`), all modules linked separately |
-| 9 | String primitives, two-dimensional arrays, searching and sorting arrays | ✅ / ⚠️ | `StrUtil.asm`, insertion sort for the score table. Arrays are 1-D arrays of structures (row = record, column = field). A separate 2-D array isn't needed |
+| 8 | Stack frames, stack parameters, `LOCAL`, recursion, `INVOKE` | ✅ | `ScanFloorsRecursive` (manual `EBP` frame, `RET 8`), `INVOKE` with parameters everywhere |
+| 9 | String primitives, two-dimensional arrays, searching and sorting arrays | ✅ / ⚠️ | `StrUtil.asm`, bubble sort for the score table. Arrays are 1-D arrays of structures (row = record, column = field). A separate 2-D array isn't needed |
 | 10 | Structures, macros, conditional-assembly directives | ✅ / ❌ | `STRUCT`, macros with `LOCAL`, `IFNDEF` guards. `UNION`: no natural use |
 | 11 | MS-Windows programming: Win32 console functions, file I/O | ✅ | Console title / cursor, `WriteFile`, high-score file |
 | 12 | Floating-point (FPU) | ❌ | The game only needs integers |
@@ -213,12 +213,11 @@ difficulty tick
                GameState.asm  (all globals + difficulty table)
                StrUtil.asm    (string primitives)
                            |
-               include/Elevator.inc  (constants, STRUCTs, EXTERNDEF, PROTO)
+               Constants.inc  (fixed numbers and STRUCTs)
 ```
 
-- **One module per feature.** Each team member's day touches its own file, so merge conflicts are rare.
-- **All shared data lives in `GameState.asm`** and is declared once in `Elevator.inc` with `EXTERNDEF`.
-- **Every procedure is declared with `PROTO` in `Elevator.inc`** before it exists, so the interfaces are fixed from Day 1.
+- **One file per feature, one program.** `main.asm` pastes every file in with `INCLUDE`, so the game is assembled as a single program. Every part can use every variable and function directly.
+- **All shared variables live in `GameState.asm`**, which is included first.
 - **Rendering is separate from logic.** `Building`, `Elevator`, `Scan`, `Shop` and `Score` never print. They update state and call `SetStatus`. Only `Render.asm` draws. That is what makes them testable.
 
 ---
@@ -264,7 +263,7 @@ Select difficulty ──► ResetGameState
                 ↓
          ShowSummary ──► qualifies for top 10? ──► enter name
                                     |
-                     InsertScoreSorted ──► SaveScores ──► ShowScores
+                     AddHighScore (bubble sort) ──► SaveScores ──► ShowScores
                                     |
                                     ↓
                                 Main menu
@@ -357,7 +356,7 @@ Example: Normal (×2), 8 normal and 2 critical civilians rescued, 3 lost, 40 ene
 
 ### High scores
 - After the game, if `totalScore > 0` and it beats the 10th entry (or the table isn't full), the player enters a name (max 15 characters, stored in upper case).
-- The entry is placed by **insertion sort**: records below it are shifted down one slot (whole 24-byte records moved with `REP MOVSB`), and the table is saved to `data/highscores.dat`.
+- The new entry goes at the bottom of the table (or replaces the 10th entry), then the table is sorted with **bubble sort**: neighbouring records are compared and swapped until the highest score is first. The table is saved to `data/highscores.dat`.
 - Equal scores keep their original order (the new entry goes below existing equal scores).
 - File layout: the 4-byte entry count, then all 10 records (244 bytes). A missing or short file, or a count above 10, loads as an empty table.
 
@@ -394,11 +393,9 @@ TTL colours: **green** > 50 % left, **yellow** 25–50 %, **red** < 25 %. Critic
 ```
 COALProject/
 │
-├── include/
-│   └── Elevator.inc            # Constants, STRUCTs, EXTERNDEF globals, PROTOs (the contract)
-│
 ├── src/
-│   ├── main.asm                # Entry point only; kept small
+│   ├── main.asm                # Program start; INCLUDEs every other file
+│   ├── Constants.inc           # Fixed numbers and STRUCTs
 │   ├── GameState.asm           # All global variables + difficulty table       [Day 1]
 │   ├── StrUtil.asm             # String primitives (SCASB, CMPSB, STOSB, ...)  [Day 1]
 │   ├── Menu.asm                # Main menu, How to Play                        [Day 1]
@@ -457,7 +454,7 @@ COALProject/
 | Irvine32 library in `C:\Irvine` | Console I/O, colours, timing, random numbers, files |
 | VS Code (optional: *MASM/TASM* extension) | Editing |
 
-If Irvine32 is somewhere else, set `IRVINE_DIR` before building:
+`build.bat` looks for Irvine32 in `C:\Irvine` and `C:\Irvine32-master`. If it is somewhere else, set `IRVINE_DIR` before building:
 
 ```bat
 set IRVINE_DIR=D:\Irvine
@@ -467,7 +464,7 @@ set IRVINE_DIR=D:\Irvine
 
 ## 14. Building, Running and Testing
 
-`build.bat` finds Visual Studio's MASM by itself (through `vswhere`). It works from a normal Command Prompt, PowerShell or the VS Code terminal.
+`build.bat` finds Visual Studio's MASM by itself (through `vswhere`). It assembles only `src\main.asm`, which includes every other file. It works from Command Prompt, PowerShell, Git Bash or the VS Code terminal.
 
 ```bat
 build.bat            :: assemble + link  -> build\ElevatorRescue.exe
@@ -476,7 +473,7 @@ build.bat test       :: build and run the test runner -> build\RunTests.exe
 build.bat clean      :: delete build\
 ```
 
-From PowerShell, use `.\build.bat test`.
+From PowerShell use `.\build.bat run`, from Git Bash use `./build.bat run`.
 
 Expected test output:
 
@@ -635,7 +632,7 @@ To make logic testable, tests set the globals directly (for example `mov elevato
 10. Finish the round. Show the round score and the **MUL** for the multiplier.
 11. Quit with `Q` in round 2. Show the summary, enter a name, and see the **sorted** high-score table.
 12. Restart the program. Show that the high scores were **loaded from the file**.
-13. Open the code: `STRUCT` definitions, the bit flags, a `CMP`/`Jcc` decision, the string primitives in `StrUtil.asm`, and the insertion sort.
+13. Open the code: `STRUCT` definitions, the bit flags, a `CMP`/`Jcc` decision, the string primitives in `StrUtil.asm`, and the bubble sort.
 14. Walk through the course topic table (Section 7).
 
 ---
@@ -670,10 +667,10 @@ By completing this project, the team will have practised:
 - Recursion in assembly
 - String primitives with repeat prefixes
 - Macros and conditional assembly
-- Multi-module programs and linking
+- Splitting a program into files with `INCLUDE`
 - Real-time input and timing on the Win32 console
 - File I/O through Irvine32 / Win32
-- Insertion sort on records
+- Bubble sort on records
 - Writing automated tests in assembly
 - Git branching, Pull Requests and code review
 

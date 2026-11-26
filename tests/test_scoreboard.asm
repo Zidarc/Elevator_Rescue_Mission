@@ -1,7 +1,4 @@
 ; test_scoreboard.asm - tests for the high-score table and the file.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 .data
 tsFile      BYTE "build\test_scores.dat", 0
@@ -20,7 +17,7 @@ FillTenScores PROC USES eax ecx
     call ClearScores
     mov  ecx, 1000
 fillLoop:
-    INVOKE InsertScoreSorted, ADDR tsNameB, ecx, DIFF_NORMAL, 1
+    INVOKE AddHighScore, ADDR tsNameB, ecx, DIFF_NORMAL, 1
     sub  ecx, 100
     jnz  fillLoop
     ret
@@ -29,7 +26,7 @@ FillTenScores ENDP
 ; New scores go to the right place and whole records move with their names.
 TestInsertPositions PROC USES eax
     call ClearScores
-    INVOKE InsertScoreSorted, ADDR tsNameA, 500, DIFF_EASY, 3
+    INVOKE AddHighScore, ADDR tsNameA, 500, DIFF_EASY, 3
     mAssertEq eax, 1, "first score goes to rank 1"
     mAssertEq highScoreCount, 1, "count is 1"
     mAssertEq highScores[0].points, 500, "points stored"
@@ -40,18 +37,18 @@ TestInsertPositions PROC USES eax
     INVOKE StrEqual, ADDR highScores[0].playerName, ADDR tsNameA
     mAssertEq eax, 1, "name stored"
 
-    INVOKE InsertScoreSorted, ADDR tsNameB, 900, DIFF_HARD, 2
+    INVOKE AddHighScore, ADDR tsNameB, 900, DIFF_HARD, 2
     mAssertEq eax, 1, "higher score goes to the top"
     mAssertEq highScores[0].points, 900, "top is now 900"
     mAssertEq highScores[1 * SIZEOF HighScore].points, 500, "old top moved down"
     INVOKE StrEqual, ADDR highScores[1 * SIZEOF HighScore].playerName, ADDR tsNameA
     mAssertEq eax, 1, "whole record moved with its name"
 
-    INVOKE InsertScoreSorted, ADDR tsNameC, 700, DIFF_NORMAL, 3
+    INVOKE AddHighScore, ADDR tsNameC, 700, DIFF_NORMAL, 3
     mAssertEq eax, 2, "middle score goes to rank 2"
     mAssertEq highScores[2 * SIZEOF HighScore].points, 500, "lower score pushed to rank 3"
 
-    INVOKE InsertScoreSorted, ADDR tsNameD, 100, DIFF_NORMAL, 1
+    INVOKE AddHighScore, ADDR tsNameD, 100, DIFF_NORMAL, 1
     mAssertEq eax, 4, "lowest score goes to the bottom"
     mAssertEq highScoreCount, 4, "count is 4"
     ret
@@ -63,29 +60,29 @@ TestInsertFullTable PROC USES eax
     call FillTenScores
     mAssertEq highScoreCount, MAX_SCORES, "table holds 10"
 
-    INVOKE InsertScoreSorted, ADDR tsNameA, 50, DIFF_NORMAL, 1
+    INVOKE AddHighScore, ADDR tsNameA, 50, DIFF_NORMAL, 1
     mAssertEq eax, 0, "11th score lower than all 10 is rejected"
     mAssertEq highScoreCount, MAX_SCORES, "count stays 10"
     mAssertEq highScores[9 * SIZEOF HighScore].points, 100, "last entry unchanged"
 
-    INVOKE InsertScoreSorted, ADDR tsNameA, 100, DIFF_NORMAL, 1
+    INVOKE AddHighScore, ADDR tsNameA, 100, DIFF_NORMAL, 1
     mAssertEq eax, 0, "a tie with the 10th entry does not qualify"
 
-    INVOKE InsertScoreSorted, ADDR tsNameA, 2000, DIFF_NORMAL, 1
+    INVOKE AddHighScore, ADDR tsNameA, 2000, DIFF_NORMAL, 1
     mAssertEq eax, 1, "new best into a full table is rank 1"
     mAssertEq highScoreCount, MAX_SCORES, "count still 10"
     mAssertEq highScores[1 * SIZEOF HighScore].points, 1000, "others moved down one"
     mAssertEq highScores[9 * SIZEOF HighScore].points, 200, "old 10th entry dropped off"
 
     call ClearScores
-    INVOKE InsertScoreSorted, ADDR tsNameA, 500, DIFF_NORMAL, 1
-    INVOKE InsertScoreSorted, ADDR tsNameB, 500, DIFF_NORMAL, 1
+    INVOKE AddHighScore, ADDR tsNameA, 500, DIFF_NORMAL, 1
+    INVOKE AddHighScore, ADDR tsNameB, 500, DIFF_NORMAL, 1
     mAssertEq eax, 2, "equal score goes below the existing one"
     INVOKE StrEqual, ADDR highScores[0].playerName, ADDR tsNameA
     mAssertEq eax, 1, "the older equal score stays on top"
 
     call ClearScores
-    INVOKE InsertScoreSorted, ADDR tsLongName, 10, DIFF_NORMAL, 1
+    INVOKE AddHighScore, ADDR tsLongName, 10, DIFF_NORMAL, 1
     INVOKE StrLen, ADDR highScores[0].playerName
     mAssertEq eax, NAME_SIZE - 1, "long names are cut to 15 characters"
     ret
@@ -94,7 +91,7 @@ TestInsertFullTable ENDP
 ; Save then load gives the same table; a missing or damaged file gives an empty table.
 TestScoreFile PROC USES eax ebx ecx edx
     call FillTenScores
-    INVOKE InsertScoreSorted, ADDR tsNameC, 950, DIFF_HARD, 3
+    INVOKE AddHighScore, ADDR tsNameC, 950, DIFF_HARD, 3
     INVOKE SaveScoresTo, ADDR tsFile
     mAssertEq eax, 1, "save succeeds"
 
@@ -140,5 +137,3 @@ TestScoreboard PROC
     call TestScoreFile
     ret
 TestScoreboard ENDP
-
-END

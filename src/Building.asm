@@ -1,8 +1,6 @@
 ; Building.asm - makes a new random building at the start of every round.
 ; Decides for each floor whether it has normal people, critical people,
 ; an energy pack or nothing, and how many seconds (TTL) the people have.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 PERCENT_RANGE = 100                     ; RandomRange limit for % rolls
 
@@ -208,5 +206,3 @@ storeEnergy:
 initDone:
     ret
 InitializeGame ENDP
-
-END

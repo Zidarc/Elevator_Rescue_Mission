@@ -1,7 +1,4 @@
 ; test_score.asm - tests for the round score and the shop.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 SHOP_FLOOR_A = 3
 SHOP_FLOOR_B = 6
@@ -210,5 +207,3 @@ TestScore PROC
     call TestShopRefusals
     ret
 TestScore ENDP
-
-END

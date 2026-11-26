@@ -8,7 +8,7 @@ Module and procedure reference for the final program. It lists what each procedu
 - A procedure changes **only** the registers listed under *Changes*. Everything else is saved with `USES` or `PUSH`/`POP`. "—" means no register changes. Win32 and some Irvine calls (`CloseFile`, `ReadKeyFlush`, `Beep`, `SetConsoleCursorInfo`) change EAX, ECX and EDX, so the procedures that call them save those registers.
 - Logic modules (`Building`, `Elevator`, `Scan`, `Shop`, `CalcRoundScore`) never print. They report through `statusMsg`. The screens live in `Render`, `Menu`, `ShowSummary` and `Scoreboard`.
 - Every decision is a `CMP`/`TEST` followed by a conditional jump. There are no `.IF`/`.WHILE` directives. Unsigned jumps (`JA`/`JB`/`JAE`/`JBE`) are used for counts, energy, TTL and addresses.
-- The direction flag is clear (`CLD`) everywhere except during the backwards record copy in `InsertScoreSorted`, which sets it back with `CLD` straight after.
+- The direction flag is always clear (`CLD`), so string instructions move forwards.
 
 ---
 
@@ -19,7 +19,8 @@ main.asm ─► Menu.asm ─┬─► GameLoop.asm ─┬─► Building  Elevat
                       │                 └─► Render (all game drawing)
                       └─► Scoreboard.asm (table, file I/O)
             all of them ─► GameState.asm (globals) · StrUtil.asm (strings)
-                           include/Elevator.inc (constants, STRUCTs, EXTERNDEF, PROTO)
+                           Constants.inc (fixed numbers, STRUCTs)
+ main.asm INCLUDEs every file, so the whole game is assembled as one program.
 ```
 
 | Module | Responsibility |
@@ -139,7 +140,9 @@ main.asm ─► Menu.asm ─┬─► GameLoop.asm ─┬─► Building  Elevat
 | Procedure | Receives | Returns | Changes |
 |---|---|---|---|
 | `ClearScores` | — | Every record zeroed (`REP STOSB`), count 0 | — |
-| `InsertScoreSorted` | `pName`, `scoreValue`, `levelValue`, `roundsValue` | `EAX` = rank 1–10, or 0 if it does not qualify (see 4.4) | EAX |
+| `AddHighScore` | `pName`, `scoreValue`, `levelValue`, `roundsValue` | `EAX` = rank 1–10, or 0 if it does not qualify (see 4.4) | EAX |
+| `SortScores` | — | table sorted, highest first (bubble sort) | — |
+| `SwapRecords` | `ESI` = a record | that record and the next one swapped | — |
 | `ScoreQualifies` | `EAX` = score | `EAX` = 1 if it would enter the table | EAX |
 | `RecordScore` | `totalScore`, `difficulty`, `roundNum` | `EAX` = rank or 0. Name entry (empty → `PLAYER`, cut to 15, upper case), insert, save, show | EAX |
 | `ShowScores` | the table | Table screen with `StrPadRight` columns; waits | — |
@@ -151,7 +154,7 @@ main.asm ─► Menu.asm ─┬─► GameLoop.asm ─┬─► Building  Elevat
 
 ## 3. Memory layout
 
-### Structures (`include/Elevator.inc`)
+### Structures (`src/Constants.inc`)
 
 ```
 FloorInfo  (8 bytes)            DiffSetting (20 bytes)        HighScore (24 bytes)
@@ -238,19 +241,23 @@ Below the lobby, 0 − 1 becomes `0FFFFFFFFh`, so one unsigned `JA` stops the re
 
 The screen is cleared only at the start of a round and after the shop. In between, `DrawGameState` moves the cursor with `Gotoxy` and rewrites every line in place. Each value goes into a fixed-width field padded with spaces, so a shorter value covers a longer one and nothing needs clearing.
 
-### 4.4 Insertion into the score table (`InsertScoreSorted`)
+### 4.4 Adding to the score table (`AddHighScore` + bubble sort)
 
 ```
-i = 0
-while i < count and table[i].points >= score: i++      ; ties go below
-if i >= 10: return 0                                    ; not good enough
-n = min(count, 9) - i                                   ; records to move
-copy n * 24 bytes from &table[i] to &table[i+1]         ; STD + REP MOVSB from the
-                                                        ; last byte: the blocks overlap
-clear table[i] (REP STOSB), write name / points / level / rounds
-if count < 10: count++
-return i + 1
+if count < 10: slot = count, count++           ; room at the bottom
+else if score > table[9].points: slot = 9      ; replace the 10th
+else: return 0                                 ; not good enough
+write name / points / level / rounds into table[slot]
+
+SortScores (bubble sort, highest first):
+  repeat count - 1 passes:
+    for each neighbouring pair (i, i+1):
+      if table[i].points < table[i+1].points: swap the two 24-byte records
+
+return rank = number of records with points >= score
 ```
+
+Equal scores are never swapped, so a new score stays below an older equal one.
 
 ### 4.5 Score
 

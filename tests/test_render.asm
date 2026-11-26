@@ -1,7 +1,4 @@
 ; test_render.asm - tests for the timer colours.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 TTL_GREEN  = lightGreen + (black * 16)
 TTL_YELLOW = yellow + (black * 16)
@@ -29,5 +26,3 @@ TestRender PROC USES eax
     mAssertEq eax, TTL_GREEN, "no starting value is green"
     ret
 TestRender ENDP
-
-END

@@ -1,8 +1,6 @@
 ; StrUtil.asm - our own string functions, built with the x86 string
 ; instructions (SCASB, CMPSB, LODSB, STOSB, REP / REPE / REPNE).
 ; Every string ends with a 0 byte.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 .code
 ; Counts the characters in a string and returns the count in EAX.
@@ -144,5 +142,3 @@ popDigit:
     mov  BYTE PTR [edi], 0
     ret
 StrFromUInt ENDP
-
-END

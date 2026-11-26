@@ -1,6 +1,4 @@
 ; Menu.asm - the main menu and the How to Play page.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 .data
 menuTitle   BYTE "  =========================================", 0Dh, 0Ah
@@ -40,7 +38,7 @@ howToPlay   BYTE "  HOW TO PLAY", 0Dh, 0Ah
 ; 1 New Game, 2 High Scores, 3 How to Play, 4 Quit.
 ; Keeps showing the menu until the player picks Quit.
 RunMainMenu PROC USES eax edx
-    INVOKE DrawIntro
+    call   DrawIntro
 menuLoop:
     call Clrscr
     mov  edx, OFFSET menuTitle
@@ -64,15 +62,15 @@ menuLoop:
     jmp  menuLoop                       ; ignore any other key
 
 optNewGame:
-    INVOKE RunGame
+    call   RunGame
     jmp  menuLoop
 
 optScores:
-    INVOKE ShowScores
+    call   ShowScores
     jmp  menuLoop
 
 optHelp:
-    INVOKE ShowHowToPlay
+    call   ShowHowToPlay
     jmp  menuLoop
 
 optQuit:
@@ -88,5 +86,3 @@ ShowHowToPlay PROC USES edx
     call WaitMsg
     ret
 ShowHowToPlay ENDP
-
-END

@@ -1,7 +1,4 @@
 ; test_gameloop.asm - tests for CheckRoundOver and HandleCommand.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 WAITING_FLOOR = 4
 
@@ -177,5 +174,3 @@ TestGameLoop PROC
     call ResetLoopTestState
     ret
 TestGameLoop ENDP
-
-END

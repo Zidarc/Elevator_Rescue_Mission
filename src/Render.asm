@@ -2,8 +2,6 @@
 ; the stats panel, the message line and the shop screen.
 ; Gotoxy moves the cursor to a row and column and we draw over the old
 ; picture, instead of clearing the screen every time, so it does not flicker.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 ROW_TITLE       = 0
 ROW_RULE_TOP    = 1
@@ -267,7 +265,11 @@ drawShaft:
 
     cmp  ebx, LOBBY
     je   drawLobby
-    lea  esi, floors[ebx * SIZEOF FloorInfo] ; ESI = address of this floor
+    mov  eax, ebx                       ; ESI = address of this floor
+    mov  ecx, SIZEOF FloorInfo          ;     = floors + floor * 8
+    mul  ecx
+    mov  esi, OFFSET floors
+    add  esi, eax
     mov  bl, (FloorInfo PTR [esi]).floorFlags ; BL = flags of this floor
     test bl, FLAG_EXPIRED
     jnz  drawExpired
@@ -554,5 +556,3 @@ SetStatus PROC USES eax, pMsg:PTR BYTE
     INVOKE StrCopyN, ADDR statusMsg, pMsg, STATUS_SIZE
     ret
 SetStatus ENDP
-
-END

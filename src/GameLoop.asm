@@ -1,7 +1,5 @@
 ; GameLoop.asm - runs the game: the real-time loop, the keys,
 ; the sounds, checking when a round ends, and playing the 3 rounds.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
 
 KEY_UP     = 'W'
 KEY_DOWN   = 'S'
@@ -17,6 +15,8 @@ TONE_ROUND  = 660
 TONE_SHORT  = 60
 TONE_LONG   = 250
 
+; Beep is a Windows function that is not part of Irvine32. This one line
+; tells MASM its name and its two numbers (frequency, length in ms).
 Beep PROTO, dwFreq:DWORD, dwDuration:DWORD
 
 .data
@@ -263,5 +263,3 @@ gameOver:
     call RecordScore
     ret
 RunGame ENDP
-
-END

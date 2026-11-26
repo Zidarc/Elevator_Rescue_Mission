@@ -2,9 +2,6 @@
 ; Random functions are called many times and every result is checked
 ; to be inside the allowed range (we can not test exact random values).
 ; SelectDifficulty needs the keyboard, so it is tested by hand.
-INCLUDE Irvine32.inc
-INCLUDE Elevator.inc
-INCLUDE TestFramework.inc
 
 TEST_FLOOR   = 3                        ; any floor 1..TOP_FLOOR
 ROLL_COUNT   = 1000
@@ -291,5 +288,3 @@ TestBuilding PROC
     call TestInitializeGame
     ret
 TestBuilding ENDP
-
-END

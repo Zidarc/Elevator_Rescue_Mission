@@ -23,7 +23,7 @@ The game is the vehicle for the course content. It uses structures and arrays of
 | Decisions with `CMP` + `Jcc` only | No `.IF`/`.WHILE`/`.REPEAT` anywhere |
 | Scoring with `MUL`/`DIV` and shifts | Round score and multiplier with `MUL`, TTL halving with `SHR`, colour thresholds with `SHL`, number printing with `DIV` |
 | Recursion with an explicit stack frame | `ScanFloorsRecursive`: manual `EBP` frame, `RET 8` |
-| A sorted, saved high-score table | Insertion sort that moves whole records with `STD` + `REP MOVSB`, binary file |
+| A sorted, saved high-score table | Bubble sort that swaps whole records, binary file |
 | Testable logic | Logic modules never print; 274 automated checks |
 
 ## 3. Improvements over the proposal
@@ -40,7 +40,7 @@ The game is the vehicle for the course content. It uses structures and arrays of
 
 ## 4. Design
 
-The program is split into 12 modules, one per feature. All of them share one contract, `include/Elevator.inc`, which holds the constants, structures, `EXTERNDEF` globals and every `PROTO`. Every global is defined once, in `GameState.asm`. Logic modules only change state and set a status message. All drawing is in `Render.asm` and the screen modules, which is what makes the logic testable without a console. The full procedure reference is in [DESIGN.md](DESIGN.md).
+The program is split into 12 files, one per feature. `main.asm` pastes them all in with `INCLUDE`, so the game is assembled as one program and every part can use every variable directly. `Constants.inc` holds the fixed numbers and the structures, and every global is defined once, in `GameState.asm`. Logic modules only change state and set a status message. All drawing is in `Render.asm` and the screen modules, which is what makes the logic testable without a console. The full procedure reference is in [DESIGN.md](DESIGN.md).
 
 Game flow: menu → difficulty → for each of 3 rounds: generate the building, run the real-time loop until the round ends, add the round's score → summary → name entry if the score reaches the top 10 → sorted table → menu.
 
@@ -52,7 +52,7 @@ Game flow: menu → difficulty → for each of 3 rounds: generate the building, 
 
 **Drawing.** The screen is cleared only when a round starts and after the shop. During play every line is rewritten in place with `Gotoxy` into fixed-width fields, so there is no flicker. TTL colours come from shifts: `2·now > start` is green, `4·now ≥ start` is yellow, otherwise red.
 
-**Insertion sort on records.** A new score walks down the table while the stored score is greater than or equal to it, so ties keep their order. The records below move down one slot as whole 24-byte blocks. Source and destination overlap, so the copy runs backwards (`STD` + `REP MOVSB` from the last byte, then `CLD`).
+**Bubble sort on records.** A new score is written at the bottom of the table (or over the 10th entry if it is better). Then the table is bubble sorted: each pass compares neighbouring records and swaps them, 24 bytes at a time, when the lower one has the higher score. Equal scores are never swapped, so ties keep their order.
 
 **File I/O.** The score file is the entry count followed by the whole table (244 bytes). Loading clears the table first and clears it again if the file is short or the count is impossible, so a damaged file never leaves half-loaded data.
 
@@ -85,8 +85,6 @@ Random procedures are tested on their **range** (1000 rolls, 800 generated floor
 |---|---|
 | With 1 energy left the elevator could neither move nor end the round | The round ends when energy drops below the cost of one move, not at exactly 0 |
 | Delivery points were added during play and the formula would add them again at the end | `CalcRoundScore` rebuilds the round score from the counters instead of adding to it |
-| Moving high-score records down overwrote the records being copied | Copy backwards with `STD` + `REP MOVSB` from the last byte, then `CLD` |
-| `LENGTHOF`/`SIZEOF` of an `EXTERNDEF` array is one element outside its module | Loops use `NUM_FLOORS` / `MAX_SCORES` |
 | `MUL` changes EDX, which `MoveElevator` didn't save | Added to `USES`; a test now checks EDX |
 | Irvine's `CloseFile` (Win32 `CloseHandle`) changes ECX, which broke a byte count in `SaveScoresTo` | Found by the save/load test; the count is kept in ESI, which Win32 preserves |
 | `GetMseconds` wraps at midnight | A borrow on the subtraction restarts the clock |

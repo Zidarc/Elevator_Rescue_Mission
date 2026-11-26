@@ -182,7 +182,7 @@ The reviewer checks that:
 - [ ] Every procedure has a header comment (what it does, Receives, Returns).
 - [ ] Every procedure preserves the registers it does not return (`USES` or `PUSH`/`POP`).
 - [ ] No `.IF` / `.ELSE` / `.WHILE` / `.REPEAT` / `.BREAK` directives.
-- [ ] No magic numbers: constants come from `Elevator.inc`.
+- [ ] No magic numbers: constants come from `Constants.inc`.
 - [ ] Logic modules do not print (only `Render.asm`, `Menu.asm`, the summary and the scoreboard screens draw).
 - [ ] No build output (`build/`, `*.obj`, `*.exe`, `*.pdb`) or `data/highscores.dat` is included.
 
@@ -200,33 +200,25 @@ The reviewer checks that:
 - Do not add features outside the agreed scope without team agreement.
 
 ### Assembly
-- **32-bit MASM with Irvine32.** Every `.asm` file starts with:
-  ```asm
-  INCLUDE Irvine32.inc
-  INCLUDE Elevator.inc
-  ```
-  and ends with `END` (only `main.asm` has `END main`, and `TestMain.asm` has `END testMain`).
-- **`include/Elevator.inc` is the contract.** All constants, structures, global variables (`EXTERNDEF`) and procedure prototypes (`PROTO`) live there. To change a prototype or a structure, tell the team first: it affects everybody.
+- **32-bit MASM with Irvine32, one program.** `src/main.asm` includes `Irvine32.inc`, `Constants.inc` and then every other `.asm` file with `INCLUDE`. The other files have no `INCLUDE` and no `END` lines of their own. A new file must be added to the `INCLUDE` list in `main.asm` (and in `tests/TestMain.asm`).
+- **`src/Constants.inc`** holds every fixed number and the structures. To change a structure, tell the team first: it affects everybody.
 - **All global variables are defined in `src/GameState.asm`.** Other modules may have their own private `.data` (messages, buffers).
 - **No high-level control directives.** `.IF`, `.ELSE`, `.ELSEIF`, `.WHILE`, `.REPEAT`, `.UNTIL`, `.BREAK` and `.CONTINUE` are not used. Every decision is a visible `CMP` / `TEST` + conditional jump. This is a COAL project.
 - **Use unsigned jumps (`JA`, `JB`, `JAE`, `JBE`) for unsigned values** (counts, energy, TTL, addresses) and signed jumps (`JG`, `JL`, `JGE`, `JLE`) only for signed values (directions, differences that can be negative).
 - **Preserve registers.** A procedure changes only the registers it returns values in. Use `USES` or `PUSH` / `POP`.
-- **Procedure header comment** on every procedure:
+- **A short plain comment above every procedure** that says what it does, so it can be explained in the viva:
   ```asm
-  ;---------------------------------------------------------------------
-  ; MoveElevator
-  ; Moves the elevator one floor if it is in range and energy allows.
-  ; Receives: direction = +1 (up) or -1 (down)
-  ; Returns:  EAX = 1 if moved, 0 if refused
-  ;---------------------------------------------------------------------
+  ; Moves the elevator one floor up (+1) or down (-1).
+  ; EAX = 1 if it moved, 0 if refused.
+  MoveElevator PROC USES ebx edx esi, direction:SDWORD
   ```
-- **No magic numbers.** Use the constants in `Elevator.inc` (`MOVE_COST`, not `2`).
+- **No magic numbers.** Use the constants in `Constants.inc` (`MOVE_COST`, not `2`).
 - **Use structure field names**, not hand-calculated offsets:
   ```asm
   mov  ax, (FloorInfo PTR [esi]).ttlLeft      ; good
   mov  ax, [esi + 2]                          ; avoid
   ```
-- **`LENGTHOF` / `SIZEOF` of an `EXTERNDEF` array is only ONE element** outside the module that defines it (array sizes are not passed between modules). Loop over `floors` with `NUM_FLOORS` and over `highScores` with `MAX_SCORES`, never with `LENGTHOF`. (`SIZEOF FloorInfo`, the size of the structure type, is fine everywhere.)
+- Loop over `floors` with `NUM_FLOORS` and over `highScores` with `MAX_SCORES`.
 - **Logic modules never print.** `Building`, `Elevator`, `Scan`, `Shop` and the scoring part of `Score` update state and call `SetStatus` with a message. Drawing belongs in `Render.asm`. This keeps the logic testable.
 - **Randomness only through Irvine32** (`RandomRange`, `Random32`). `Randomize` is called once, in `main.asm`.
 - Meaningful names: `TickFloors`, not `tf`. Labels inside procedures describe the step: `notEnoughEnergy:`, not `L3:`.
@@ -256,7 +248,7 @@ Add real-time game loop with ReadKey and GetMseconds
 Draw building and HUD with Gotoxy and colours
 Add lobby shop with credit checks
 Implement round score with difficulty multiplier
-Insert high scores with insertion sort and save to file
+Sort high scores with bubble sort and save to file
 ```
 
 Avoid:
@@ -297,7 +289,7 @@ If a merge conflict happens:
 5. Build and test again.
 6. Commit the resolution.
 
-Most conflicts will be in `Elevator.inc` and `TestMain.asm`, the two shared files. Keep your additions to them small and in the right section.
+Most conflicts will be in `Constants.inc`, `main.asm` and `TestMain.asm`, the shared files. Keep your additions to them small and in the right section.
 
 ```bash
 git status
