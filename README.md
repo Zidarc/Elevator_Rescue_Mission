@@ -622,6 +622,8 @@ To make logic testable, tests set the globals directly (for example `mov elevato
 
 The full step-by-step viva script, with real screenshots, what to say and the code behind every screen, is in [Resources/Viva Walkthrough.pdf](Resources/). A one-page summary of the rules is in [Resources/Game Guide.pdf](Resources/).
 
+Code guides for the viva, one per presenter, explain every file, its purpose and its important functions with the real code: [Resources/Code Guide - Muhammad Abbas.pdf](Resources/) and [Resources/Code Guide - Ali Asgar.pdf](Resources/). The harder instructions (`INVOKE`, `MUL`, `REP STOSB`, `RET 8`, ...) are explained in [Resources/Instruction Cheat Sheet.pdf](Resources/).
+
 1. Run `build.bat test` and show **ALL TESTS PASSED**.
 2. Start the game. Show the intro screen and the **How to Play** page.
 3. Choose **Normal**. Show the building: unscanned floors show `?`, TTLs counting down in **real time**.
